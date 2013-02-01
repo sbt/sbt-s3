@@ -15,7 +15,7 @@ import org.apache.commons.lang.StringUtils.removeEndIgnoreCase
   * Here is a complete example:
   * 
   *  - project/plugin.sbt:
-  * {{{addSbtPlugin("com.typesafe.sbt" % "sbt-s3" % "0.1-SNAPSHOT")}}}
+  * {{{addSbtPlugin("com.typesafe.sbt" % "sbt-s3" % "0.1")}}}
   * 
   *  - build.sbt:
   * {{{
