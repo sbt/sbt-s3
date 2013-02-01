@@ -22,3 +22,6 @@ scalacOptions in (Compile,doc) <++= (name,description,version) map {(n,d,v) =>
 
 publishMavenStyle := false
 
+publishTo <<= isSnapshot(if (_) Some(Classpaths.sbtPluginSnapshots) else Some(Classpaths.sbtPluginReleases))
+
+credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")
