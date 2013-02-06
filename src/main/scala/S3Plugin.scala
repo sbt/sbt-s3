@@ -115,10 +115,12 @@ object S3Plugin extends sbt.Plugin {
   /**
     * A list of S3 keys (pathnames) representing objects in a bucket on which a certain operation should be performed.
     */
-    val keys=SettingKey[Seq[String]]("s3-keys","List of S3 keys (pathnames) on which to perform a certain operation.")
+    val keys=TaskKey[Seq[String]]("s3-keys","List of S3 keys (pathnames) on which to perform a certain operation.")
   }
 
   import S3._
+
+  type Bucket=String
 
   private def getClient(creds:Seq[Credentials],host:String) = {
     val Some(cred) = Credentials.forHost(creds, host)
@@ -128,45 +130,43 @@ object S3Plugin extends sbt.Plugin {
   }
   private def getBucket(host:String) = removeEndIgnoreCase(host,".s3.amazonaws.com")
 
+  private def s3InitTask[A]( thisTask:TaskKey[Unit], itemsKey:TaskKey[Seq[A]],
+                             op:(AmazonS3Client,Bucket,A)=>Unit,
+                             msg:(Bucket,A)=>String, lastMsg:(Bucket,Seq[A])=>String )  =
+
+    (credentials in thisTask, itemsKey in thisTask, host in thisTask,streams) map { (creds,items,host,streams) =>
+      val client = getClient(creds, host)
+      val bucket = getBucket(host)
+      items foreach { item =>
+        streams.log.debug(msg(bucket,item))
+        op(client,bucket,item)
+      }
+      streams.log.info(lastMsg(bucket,items))
+    }
+
+
   /*
    * Include the line {{{s3Settings}}} in your build.sbt file, in order to import the tasks defined by this S3 plugin.
    */
   val s3Settings = Seq(
 
-    // yep: it's quite simple. Any S3 error will cause an exception
-    upload <<= (credentials in upload, mappings in upload, host in upload,streams) map 
-    { (creds,mapps,host,streams) =>
-      val client = getClient(creds, host)
-      val bucket = getBucket(host)
-      mapps foreach { case (file,key) =>
-        streams.log.debug("Uploading "+file.getAbsolutePath()+" as "+key+" into "+bucket)
-        client.putObject(bucket,key,file) 
-      }
-      streams.log.info("Uploaded "+mapps.length+" files to the S3 bucket \""+bucket+"\".")
-    },
+    upload <<= s3InitTask[(File,String)](upload, mappings,
+                           { case (client,bucket,(file,key)) => client.putObject(bucket,key,file) },
+                           { case (bucket,(file,key)) =>        "Uploading "+file.getAbsolutePath()+" as "+key+" into "+bucket },
+                           { case (bucket,mapps) =>             "Uploaded "+mapps.length+" files to the S3 bucket \""+bucket+"\"." }
+                         ),
 
-    download <<= (credentials in download, mappings in download, host in download, streams) map
-    { (creds,mapps,host,streams) =>
-      val client = getClient(creds, host)
-      val bucket = getBucket(host)
-      val req=new GetObjectRequest(bucket,"")
-      mapps foreach { case (file,key) =>
-        streams.log.debug("Downloading "+file.getAbsolutePath()+" as "+key+" from "+bucket)
-        client.getObject(req.withKey(key),file)
-      }
-      streams.log.info("Downloaded "+mapps.length+" files from the S3 bucket \""+bucket+"\".")
-    },
+    download <<= s3InitTask[(File,String)](download, mappings,
+                           { case (client,bucket,(file,key)) => client.getObject(new GetObjectRequest(bucket,key),file) },
+                           { case (bucket,(file,key)) =>        "Downloading "+file.getAbsolutePath()+" as "+key+" from "+bucket },
+                           { case (bucket,mapps) =>             "Downloaded "+mapps.length+" files from the S3 bucket \""+bucket+"\"." }
+                         ),
 
-    delete <<= (credentials in delete, keys in delete, host in delete, streams) map
-    { (creds,keys,host,streams) =>
-      val client = getClient(creds, host)
-      val bucket = getBucket(host)
-      keys foreach { key =>
-        streams.log.debug("Deleting "+key+" from "+bucket)
-        client.deleteObject(bucket,key)
-      }
-      streams.log.info("Deleted "+keys.length+" objects from the S3 bucket \""+bucket+"\".")
-    },
+    delete <<= s3InitTask[String](delete, keys,
+                           { case (client,bucket,key) => client.deleteObject(bucket,key) },
+                           { case (bucket,key) =>        "Deleting "+key+" from "+bucket },
+                           { case (bucket,keys1) =>      "Deleted "+keys1.length+" objects from the S3 bucket \""+bucket+"\"." }
+                         ),
 
     host := "",
     keys := Seq(),
