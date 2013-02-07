@@ -3,7 +3,7 @@
 '''sbt-s3''' is a simple sbt plugin that can manipulate objects on Amazon S3.
 == Usage ==
   - add to your project/plugin.sbt the line:
-   {{{addSbtPlugin("com.typesafe.sbt" % "sbt-s3" % "0.1")}}}
+   {{{addSbtPlugin("com.typesafe.sbt" % "sbt-s3" % "0.4")}}}
   - then add to your build.sbt the line:
    {{{s3Settings}}}
  

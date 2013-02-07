@@ -2,7 +2,7 @@ name := "sbt-s3"
 
 description := "S3 Plugin for sbt"
 
-version := "0.3"
+version := "0.4"
 
 scalaVersion := "2.9.2"
 
