@@ -116,6 +116,13 @@ object S3Plugin extends sbt.Plugin {
     * A list of S3 keys (pathnames) representing objects in a bucket on which a certain operation should be performed.
     */
     val keys=TaskKey[Seq[String]]("s3-keys","List of S3 keys (pathnames) on which to perform a certain operation.")
+
+  /**
+    * If you set "progress" to true, a progress indicator will be displayed while the individual files are uploaded or downloaded.
+    * Only recommended for interactive use or testing; the default value is false.
+    */
+    val progress=SettingKey[Boolean]("s3-progress","Set to true to get a progress indicator during S3 uploads/downloads (default false).")
+
   }
 
   import S3._
@@ -131,19 +138,59 @@ object S3Plugin extends sbt.Plugin {
   private def getBucket(host:String) = removeEndIgnoreCase(host,".s3.amazonaws.com")
 
   private def s3InitTask[A]( thisTask:TaskKey[Unit], itemsKey:TaskKey[Seq[A]],
-                             op:(AmazonS3Client,Bucket,A)=>Unit,
+                             op:(AmazonS3Client,Bucket,A,Boolean)=>Unit,
                              msg:(Bucket,A)=>String, lastMsg:(Bucket,Seq[A])=>String )  =
 
-    (credentials in thisTask, itemsKey in thisTask, host in thisTask,streams) map { (creds,items,host,streams) =>
-      val client = getClient(creds, host)
-      val bucket = getBucket(host)
-      items foreach { item =>
-        streams.log.debug(msg(bucket,item))
-        op(client,bucket,item)
-      }
-      streams.log.info(lastMsg(bucket,items))
+    (credentials in thisTask, itemsKey in thisTask, host in thisTask, progress in thisTask, streams) map {
+      (creds,items,host,progress,streams) =>
+        val client = getClient(creds, host)
+        val bucket = getBucket(host)
+        items foreach { item =>
+          streams.log.debug(msg(bucket,item))
+          op(client,bucket,item,progress)
+        }
+        streams.log.info(lastMsg(bucket,items))
     }
 
+
+  private def progressBar(percent:Int) = {
+    val b="=================================================="
+    val s="                                                 "
+    val p=percent/2
+    val z:StringBuilder=new StringBuilder(80)
+    z.append("\r[")
+    z.append(b.substring(0,p))
+    if (p<50) {z.append(">"); z.append(s.substring(p))}
+    z.append("]   ")
+    if (p<5) z.append(" ")
+    if (p<50) z.append(" ")
+    z.append(percent)
+    z.append("%   ")
+    z.mkString
+  }
+
+  def addProgressListener(request:AmazonWebServiceRequest { // structural
+                            def setProgressListener(progressListener:ProgressListener):Unit
+                          }, file:File, key:String) = request.setProgressListener(new ProgressListener() {
+    var uploadedBytes=0L
+    val fileSize=file.length()
+    val fileName={
+      val area=30
+      val n=new File(key).getName()
+      val l=n.length()
+      if (l>area-3)
+        "..."+n.substring(l-area-3)
+      else
+        n
+      }
+    def progressChanged(progressEvent:ProgressEvent) {
+      uploadedBytes=uploadedBytes+progressEvent.getBytesTransfered()
+      print(progressBar(((uploadedBytes*100)/fileSize).toInt))
+      print(fileName)
+      if (progressEvent.getEventCode() == ProgressEvent.COMPLETED_EVENT_CODE)
+        println()
+    }
+  })
 
   /*
    * Include the line {{{s3Settings}}} in your build.sbt file, in order to import the tasks defined by this S3 plugin.
@@ -151,27 +198,35 @@ object S3Plugin extends sbt.Plugin {
   val s3Settings = Seq(
 
     upload <<= s3InitTask[(File,String)](upload, mappings,
-                           { case (client,bucket,(file,key)) => client.putObject(bucket,key,file) },
-                           { case (bucket,(file,key)) =>        "Uploading "+file.getAbsolutePath()+" as "+key+" into "+bucket },
-                           { case (bucket,mapps) =>             "Uploaded "+mapps.length+" files to the S3 bucket \""+bucket+"\"." }
+                           { case (client,bucket,(file,key),progress) =>
+                               val request=new PutObjectRequest(bucket,key,file)
+                               if (progress) addProgressListener(request,file,key)
+                               client.putObject(request)
+                           },
+                           { case (bucket,(file,key)) =>  "Uploading "+file.getAbsolutePath()+" as "+key+" into "+bucket },
+                           { case (bucket,mapps) =>       "Uploaded "+mapps.length+" files to the S3 bucket \""+bucket+"\"." }
                          ),
 
     download <<= s3InitTask[(File,String)](download, mappings,
-                           { case (client,bucket,(file,key)) => client.getObject(new GetObjectRequest(bucket,key),file) },
-                           { case (bucket,(file,key)) =>        "Downloading "+file.getAbsolutePath()+" as "+key+" from "+bucket },
-                           { case (bucket,mapps) =>             "Downloaded "+mapps.length+" files from the S3 bucket \""+bucket+"\"." }
+                           { case (client,bucket,(file,key),progress) =>
+                               val request=new GetObjectRequest(bucket,key)
+                               if (progress) addProgressListener(request,file,key)
+                               client.getObject(request,file)
+                           },
+                           { case (bucket,(file,key)) =>  "Downloading "+file.getAbsolutePath()+" as "+key+" from "+bucket },
+                           { case (bucket,mapps) =>       "Downloaded "+mapps.length+" files from the S3 bucket \""+bucket+"\"." }
                          ),
 
     delete <<= s3InitTask[String](delete, keys,
-                           { case (client,bucket,key) => client.deleteObject(bucket,key) },
-                           { case (bucket,key) =>        "Deleting "+key+" from "+bucket },
-                           { case (bucket,keys1) =>      "Deleted "+keys1.length+" objects from the S3 bucket \""+bucket+"\"." }
+                           { case (client,bucket,key,_) => client.deleteObject(bucket,key) },
+                           { case (bucket,key) =>          "Deleting "+key+" from "+bucket },
+                           { case (bucket,keys1) =>        "Deleted "+keys1.length+" objects from the S3 bucket \""+bucket+"\"." }
                          ),
 
     host := "",
     keys := Seq(),
     mappings in download := Seq(),
-    mappings in upload := Seq()
-
+    mappings in upload := Seq(),
+    progress := false
   )
 }
