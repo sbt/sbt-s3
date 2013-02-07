@@ -169,9 +169,9 @@ object S3Plugin extends sbt.Plugin {
     z.mkString
   }
 
-  def addProgressListener(request:AmazonWebServiceRequest { // structural
-                            def setProgressListener(progressListener:ProgressListener):Unit
-                          }, file:File, key:String) = request.setProgressListener(new ProgressListener() {
+  private def addProgressListener(request:AmazonWebServiceRequest { // structural
+                                    def setProgressListener(progressListener:ProgressListener):Unit
+                                  }, file:File, key:String) = request.setProgressListener(new ProgressListener() {
     var uploadedBytes=0L
     val fileSize=file.length()
     val fileName={
