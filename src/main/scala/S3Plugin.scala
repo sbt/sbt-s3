@@ -146,9 +146,9 @@ object S3Plugin extends sbt.Plugin {
   }
   private def getBucket(host:String) = removeEndIgnoreCase(host,".s3.amazonaws.com")
 
-  private def s3InitTask[A]( thisTask:TaskKey[Unit], itemsKey:TaskKey[Seq[A]],
-                             op:(AmazonS3Client,Bucket,A,Boolean)=>Unit,
-                             msg:(Bucket,A)=>String, lastMsg:(Bucket,Seq[A])=>String )  =
+  private def s3InitTask[Item](thisTask:TaskKey[Unit], itemsKey:TaskKey[Seq[Item]],
+                               op:(AmazonS3Client,Bucket,Item,Boolean)=>Unit,
+                               msg:(Bucket,Item)=>String, lastMsg:(Bucket,Seq[Item])=>String )  =
 
     (credentials in thisTask, itemsKey in thisTask, host in thisTask, progress in thisTask, streams) map {
       (creds,items,host,progress,streams) =>
