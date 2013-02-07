@@ -15,7 +15,7 @@ import org.apache.commons.lang.StringUtils.removeEndIgnoreCase
   * Here is a complete example:
   * 
   *  - project/plugin.sbt:
-  * {{{addSbtPlugin("com.typesafe.sbt" % "sbt-s3" % "0.1")}}}
+  * {{{addSbtPlugin("com.typesafe.sbt" % "sbt-s3" % "0.3")}}}
   * 
   *  - build.sbt:
   * {{{
@@ -42,6 +42,15 @@ import org.apache.commons.lang.StringUtils.removeEndIgnoreCase
   * then try:
   * {{{$ sbt s3-upload}}}
   * 
+  * You can also see progress while uploading:
+  * {{{
+  * $ sbt          
+  * > set S3.progress in S3.upload := true
+  * > s3-upload
+  * [==================================================]   100%   zipa.txt
+  * [=====================================>            ]    74%   zipb.jar
+  * }}}
+  *
   *  Please select the nested `S3` object link, below, for additional information on the available tasks.
   */
 object S3Plugin extends sbt.Plugin {

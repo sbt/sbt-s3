@@ -7,7 +7,7 @@
 ## Usage
 
 * add to your project/plugin.sbt the line:
-   `addSbtPlugin("com.typesafe.sbt" % "sbt-s3" % "0.1")`
+   `addSbtPlugin("com.typesafe.sbt" % "sbt-s3" % "0.3")`
 * then add to your build.sbt the line:
    `s3Settings`
  
@@ -24,7 +24,7 @@ Here is a complete example:
 
 project/plugin.sbt:
     
-    addSbtPlugin("com.typesafe.sbt" % "sbt-s3" % "0.1")
+    addSbtPlugin("com.typesafe.sbt" % "sbt-s3" % "0.3")
 
 build.sbt:
 
@@ -49,4 +49,10 @@ Just create two sample files called "a" and "b" in the same directory that conta
 
     $ sbt s3-upload
     
+You can also see progress while uploading:
 
+    $ sbt
+    > set S3.progress in S3.upload := true
+    > s3-upload
+    [==================================================]   100%   zipa.txt
+    [=====================================>            ]    74%   zipb.jar
