@@ -191,7 +191,7 @@ object S3Plugin extends sbt.Plugin {
         "..."+n.substring(l-area-3)
       else
         n
-      }
+    }
     def progressChanged(progressEvent:ProgressEvent) {
       uploadedBytes=uploadedBytes+progressEvent.getBytesTransfered()
       print(progressBar(((uploadedBytes*100)/fileSize).toInt))
@@ -213,7 +213,7 @@ object S3Plugin extends sbt.Plugin {
                                client.putObject(request)
                            },
                            { case (bucket,(file,key)) =>  "Uploading "+file.getAbsolutePath()+" as "+key+" into "+bucket },
-                           { case (bucket,mapps) =>       "Uploaded "+mapps.length+" files to the S3 bucket \""+bucket+"\"." }
+                           {      (bucket,mapps) =>       "Uploaded "+mapps.length+" files to the S3 bucket \""+bucket+"\"." }
                          ),
 
     download <<= s3InitTask[(File,String)](download, mappings,
@@ -223,13 +223,13 @@ object S3Plugin extends sbt.Plugin {
                                client.getObject(request,file)
                            },
                            { case (bucket,(file,key)) =>  "Downloading "+file.getAbsolutePath()+" as "+key+" from "+bucket },
-                           { case (bucket,mapps) =>       "Downloaded "+mapps.length+" files from the S3 bucket \""+bucket+"\"." }
+                           {      (bucket,mapps) =>       "Downloaded "+mapps.length+" files from the S3 bucket \""+bucket+"\"." }
                          ),
 
     delete <<= s3InitTask[String](delete, keys,
-                           { case (client,bucket,key,_) => client.deleteObject(bucket,key) },
-                           { case (bucket,key) =>          "Deleting "+key+" from "+bucket },
-                           { case (bucket,keys1) =>        "Deleted "+keys1.length+" objects from the S3 bucket \""+bucket+"\"." }
+                           { (client,bucket,key,_) => client.deleteObject(bucket,key) },
+                           { (bucket,key) =>          "Deleting "+key+" from "+bucket },
+                           { (bucket,keys1) =>        "Deleted "+keys1.length+" objects from the S3 bucket \""+bucket+"\"." }
                          ),
 
     host := "",
