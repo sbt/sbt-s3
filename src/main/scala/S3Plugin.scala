@@ -139,7 +139,10 @@ object S3Plugin extends sbt.Plugin {
   type Bucket=String
 
   private def getClient(creds:Seq[Credentials],host:String) = {
-    val Some(cred) = Credentials.forHost(creds, host)
+    val cred = Credentials.forHost(creds, host) match {
+      case Some(cred) => cred
+      case None       => sys.error("Could not find S3 credentials for the host: "+host)
+    }
     // username -> Access Key Id ; passwd -> Secret Access Key
     new AmazonS3Client(new BasicAWSCredentials(cred.userName, cred.passwd),
                        new ClientConfiguration().withProtocol(Protocol.HTTPS))
