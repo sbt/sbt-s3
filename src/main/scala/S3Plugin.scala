@@ -7,6 +7,7 @@ import com.amazonaws._
 import auth._,services.s3._
 import model._
 import org.apache.commons.lang.StringUtils.removeEndIgnoreCase
+import scala.sys.SystemProperties
 
 /**
   * S3Plugin is a simple sbt plugin that can manipulate objects on Amazon S3.
@@ -143,9 +144,19 @@ object S3Plugin extends sbt.Plugin {
       case Some(cred) => cred
       case None       => sys.error("Could not find S3 credentials for the host: "+host)
     }
-    // username -> Access Key Id ; passwd -> Secret Access Key
-    new AmazonS3Client(new BasicAWSCredentials(cred.userName, cred.passwd),
-                       new ClientConfiguration().withProtocol(Protocol.HTTPS))
+    val properties = new SystemProperties
+    properties.get("httpProxyHost") match {
+      case Some(proxyHost) => {
+        val clientConfiguration = new ClientConfiguration().withProtocol(Protocol.HTTPS).withProxyHost(proxyHost).withProxyPort(properties("http.proxyPort").toInt)
+        // username -> Access Key Id ; passwd -> Secret Access Key
+        print("Using proxy " + properties("http.proxyHost") + ":" + properties("http.proxyPort"))
+        new AmazonS3Client(new BasicAWSCredentials(cred.userName, cred.passwd), clientConfiguration)
+      }
+      case None => // username -> Access Key Id ; passwd -> Secret Access Key
+        new AmazonS3Client(new BasicAWSCredentials(cred.userName, cred.passwd),
+          new ClientConfiguration().withProtocol(Protocol.HTTPS))
+    }
+
   }
   private def getBucket(host:String) = removeEndIgnoreCase(host,".s3.amazonaws.com")
 
