@@ -187,11 +187,11 @@ object S3Plugin extends sbt.Plugin {
     var uploadedBytes=0L
     val fileSize=file.length()
     val fileName={
-      val area=30
+      val area=27
       val n=new File(key).getName()
       val l=n.length()
-      if (l>area-3)
-        "..."+n.substring(l-area-3)
+      if (l > area)
+        "..."+n.substring(l-area)
       else
         n
     }
