@@ -15,7 +15,7 @@ import org.apache.commons.lang.StringUtils.removeEndIgnoreCase
   * Here is a complete example:
   * 
   *  - project/plugin.sbt:
-  * {{{addSbtPlugin("com.typesafe.sbt" % "sbt-s3" % "0.4")}}}
+  * {{{addSbtPlugin("com.typesafe.sbt" % "sbt-s3" % "0.5")}}}
   * 
   *  - build.sbt:
   * {{{
@@ -191,7 +191,7 @@ object S3Plugin extends sbt.Plugin {
       val n=new File(key).getName()
       val l=n.length()
       if (l>area-3)
-        "..."+n.substring(l-area-3)
+        "..."+n.substring(l-area+3)
       else
         n
     }
