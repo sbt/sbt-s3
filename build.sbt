@@ -4,8 +4,6 @@ description := "S3 Plugin for sbt"
 
 version := "0.5"
 
-scalaVersion := "2.9.2"
-
 organization := "com.typesafe.sbt"
 
 organizationName := "Typesafe"
@@ -25,3 +23,7 @@ publishMavenStyle := false
 publishTo <<= isSnapshot(if (_) Some(Classpaths.sbtPluginSnapshots) else Some(Classpaths.sbtPluginReleases))
 
 credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")
+
+sbtVersion in Global := "0.13.0-RC2" 
+
+scalaVersion in Global := "2.10.2"
