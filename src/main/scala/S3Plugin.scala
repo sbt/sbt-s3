@@ -13,10 +13,10 @@ import org.apache.commons.lang.StringUtils.removeEndIgnoreCase
   *
   * == Example ==
   * Here is a complete example:
-  * 
+  *
   *  - project/plugin.sbt:
   * {{{addSbtPlugin("com.typesafe.sbt" % "sbt-s3" % "0.5")}}}
-  * 
+  *
   *  - build.sbt:
   * {{{
   * import S3._
@@ -24,12 +24,12 @@ import org.apache.commons.lang.StringUtils.removeEndIgnoreCase
   * s3Settings
   *
   * mappings in upload := Seq((new java.io.File("a"),"zipa.txt"),(new java.io.File("b"),"pongo/zipb.jar"))
-  * 
+  *
   * host in upload := "s3sbt-test.s3.amazonaws.com"
-  * 
+  *
   * credentials += Credentials(Path.userHome / ".s3credentials")
   * }}}
-  * 
+  *
   *  - ~/.s3credentials:
   * {{{
   * realm=Amazon S3
@@ -37,14 +37,14 @@ import org.apache.commons.lang.StringUtils.removeEndIgnoreCase
   * user=<Access Key ID>
   * password=<Secret Access Key>
   * }}}
-  * 
+  *
   * Just create two sample files called "a" and "b" in the same directory that contains build.sbt,
   * then try:
   * {{{$ sbt s3-upload}}}
-  * 
+  *
   * You can also see progress while uploading:
   * {{{
-  * $ sbt          
+  * $ sbt
   * > set S3.progress in S3.upload := true
   * > s3-upload
   * [==================================================]   100%   zipa.txt
