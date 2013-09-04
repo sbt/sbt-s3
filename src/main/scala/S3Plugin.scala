@@ -183,9 +183,8 @@ object S3Plugin extends sbt.Plugin {
 
   private def addProgressListener(request:AmazonWebServiceRequest { // structural
                                     def setProgressListener(progressListener:ProgressListener):Unit
-                                  }, file:File, key:String) = request.setProgressListener(new ProgressListener() {
+                                  }, fileSize:Long, key:String) = request.setProgressListener(new ProgressListener() {
     var uploadedBytes=0L
-    val fileSize=file.length()
     val fileName={
       val area=30
       val n=new File(key).getName()
@@ -212,7 +211,7 @@ object S3Plugin extends sbt.Plugin {
     upload <<= s3InitTask[(File,String)](upload, mappings,
                            { case (client,bucket,(file,key),progress) =>
                                val request=new PutObjectRequest(bucket,key,file)
-                               if (progress) addProgressListener(request,file,key)
+                               if (progress) addProgressListener(request,file.length(),key)
                                client.putObject(request)
                            },
                            { case (bucket,(file,key)) =>  "Uploading "+file.getAbsolutePath()+" as "+key+" into "+bucket },
@@ -222,7 +221,8 @@ object S3Plugin extends sbt.Plugin {
     download <<= s3InitTask[(File,String)](download, mappings,
                            { case (client,bucket,(file,key),progress) =>
                                val request=new GetObjectRequest(bucket,key)
-                               if (progress) addProgressListener(request,file,key)
+                               val objectMetadata=client.getObjectMetadata(bucket,key)
+                               if (progress) addProgressListener(request,objectMetadata.getContentLength(),key)
                                client.getObject(request,file)
                            },
                            { case (bucket,(file,key)) =>  "Downloading "+file.getAbsolutePath()+" as "+key+" from "+bucket },
