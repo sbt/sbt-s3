@@ -22,8 +22,8 @@ publishMavenStyle := false
 
 publishTo <<= isSnapshot(if (_) Some(Classpaths.sbtPluginSnapshots) else Some(Classpaths.sbtPluginReleases))
 
-credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")
+credentials += Credentials(Path.userHome / ".ivy2" / ".credentials-scalasbt")
 
-sbtVersion in Global := "0.13.0-RC2" 
+sbtVersion in Global := "0.13.1" 
 
-scalaVersion in Global := "2.10.2"
+scalaVersion in Global := "2.10.3"
