@@ -1,3 +1,5 @@
+import bintray.Keys._
+
 name := "sbt-s3"
 
 description := "S3 Plugin for sbt"
@@ -20,10 +22,14 @@ scalacOptions in (Compile,doc) <++= (name,description,version,sourceDirectory) m
 
 publishMavenStyle := false
 
-publishTo <<= isSnapshot(if (_) Some(Classpaths.sbtPluginSnapshots) else Some(Classpaths.sbtPluginReleases))
-
-credentials += Credentials(Path.userHome / ".ivy2" / ".credentials-scalasbt")
-
-sbtVersion in Global := "0.13.1" 
+sbtVersion in Global := "0.13.1"
 
 scalaVersion in Global := "2.10.3"
+
+bintrayPublishSettings
+
+repository in bintray := "sbt-plugins"
+
+licenses += ("BSD", url("http://directory.fsf.org/wiki/License:BSD_4Clause"))
+
+bintrayOrganization in bintray := None
