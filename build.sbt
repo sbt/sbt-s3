@@ -4,7 +4,7 @@ name := "sbt-s3"
 
 description := "S3 Plugin for sbt"
 
-version := "0.6"
+version := "0.7"
 
 organization := "com.typesafe.sbt"
 

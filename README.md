@@ -7,7 +7,7 @@
 ## Usage
 
 * add to your project/plugin.sbt the line:
-   `addSbtPlugin("com.typesafe.sbt" % "sbt-s3" % "0.6")`
+   `addSbtPlugin("com.typesafe.sbt" % "sbt-s3" % "0.7")`
 * then add to your build.sbt the line:
    `s3Settings`
  
@@ -24,7 +24,7 @@ Here is a complete example:
 
 project/plugin.sbt:
     
-    addSbtPlugin("com.typesafe.sbt" % "sbt-s3" % "0.6")
+    addSbtPlugin("com.typesafe.sbt" % "sbt-s3" % "0.7")
 
 build.sbt:
 
