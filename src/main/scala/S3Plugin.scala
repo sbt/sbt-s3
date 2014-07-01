@@ -195,7 +195,9 @@ object S3Plugin extends sbt.Plugin {
         n
     }
     def progressChanged(progressEvent:ProgressEvent) {
-      uploadedBytes=uploadedBytes+progressEvent.getBytesTransfered()
+      if(progressEvent.getEventCode() == ProgressEvent.PART_COMPLETED_EVENT_CODE) {
+        uploadedBytes=uploadedBytes+progressEvent.getBytesTransfered()
+      }
       print(progressBar(if (fileSize>0) ((uploadedBytes*100)/fileSize).toInt else 100))
       print(fileName)
       if (progressEvent.getEventCode() == ProgressEvent.COMPLETED_EVENT_CODE)
