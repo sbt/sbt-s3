@@ -1,5 +1,6 @@
 package com.typesafe.sbt
 
+import com.amazonaws.internal.StaticCredentialsProvider
 import sbt.{File => _, _}
 import java.io.File
 import Keys._
@@ -139,12 +140,12 @@ object S3Plugin extends sbt.Plugin {
   type Bucket=String
 
   private def getClient(creds:Seq[Credentials],host:String) = {
-    val cred = Credentials.forHost(creds, host) match {
-      case Some(cred) => cred
-      case None       => sys.error("Could not find S3 credentials for the host: "+host)
+    val credentialsProvider = Credentials.forHost(creds, host) match {
+      // username -> Access Key Id ; passwd -> Secret Access Key
+      case Some(cred) => new StaticCredentialsProvider(new BasicAWSCredentials(cred.userName, cred.passwd))
+      case None       => new InstanceProfileCredentialsProvider
     }
-    // username -> Access Key Id ; passwd -> Secret Access Key
-    new AmazonS3Client(new BasicAWSCredentials(cred.userName, cred.passwd),
+    new AmazonS3Client(credentialsProvider,
                        new ClientConfiguration().withProtocol(Protocol.HTTPS))
   }
   private def getBucket(host:String) = removeEndIgnoreCase(host,".s3.amazonaws.com")
