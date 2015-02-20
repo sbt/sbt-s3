@@ -1,6 +1,9 @@
 *.class
 *.log
 
+# make specific
+sbtexists
+
 # sbt specific
 dist/*
 target/
@@ -8,7 +11,15 @@ lib_managed/
 src_managed/
 project/boot/
 project/plugins/project/
-project/target/
 
 # Scala-IDE specific
 .scala_dependencies
+
+# Intellij specific cruft
+.idea
+*.iws
+.history
+.idea_modules
+gen
+out
+tmp
