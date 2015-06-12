@@ -205,6 +205,10 @@ object S3Plugin extends sbt.Plugin {
     }
   })
 
+  def prettyLastMsg(verb:String, objects:Seq[String], preposition:String, bucket:String) =
+    if (objects.length == 1) s"$verb '${objects.head}' $preposition the S3 bucket '$bucket'."
+    else                     s"$verb ${objects.length} objects $preposition the S3 bucket '$bucket'."
+
   /*
    * Include the line {{{s3Settings}}} in your build.sbt file, in order to import the tasks defined by this S3 plugin.
    */
@@ -217,7 +221,7 @@ object S3Plugin extends sbt.Plugin {
                                client.putObject(request)
                            },
                            { case (bucket,(file,key)) =>  "Uploading "+file.getAbsolutePath()+" as "+key+" into "+bucket },
-                           {      (bucket,mapps) =>       "Uploaded "+mapps.length+" files to the S3 bucket \""+bucket+"\"." }
+                           {      (bucket,mapps) =>       prettyLastMsg("Uploaded", mapps.map(_._2), "to", bucket) }
                          ),
 
     download <<= s3InitTask[(File,String)](download, mappings,
@@ -228,13 +232,13 @@ object S3Plugin extends sbt.Plugin {
                                client.getObject(request,file)
                            },
                            { case (bucket,(file,key)) =>  "Downloading "+file.getAbsolutePath()+" as "+key+" from "+bucket },
-                           {      (bucket,mapps) =>       "Downloaded "+mapps.length+" files from the S3 bucket \""+bucket+"\"." }
+                           {      (bucket,mapps) =>       prettyLastMsg("Downloaded", mapps.map(_._2), "from", bucket) }
                          ),
 
     delete <<= s3InitTask[String](delete, keys,
                            { (client,bucket,key,_) => client.deleteObject(bucket,key) },
                            { (bucket,key) =>          "Deleting "+key+" from "+bucket },
-                           { (bucket,keys1) =>        "Deleted "+keys1.length+" objects from the S3 bucket \""+bucket+"\"." }
+                           { (bucket,keys1) =>        prettyLastMsg("Deleted", keys1, "from", bucket) }
                          ),
 
     host := "",
