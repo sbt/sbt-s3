@@ -1,11 +1,12 @@
 package com.typesafe.sbt
 
+import com.amazonaws.event.{ProgressEventType, ProgressEvent, ProgressListener}
+import com.amazonaws.services.s3.model.{GetObjectRequest, PutObjectRequest}
 import sbt.{File => _, _}
 import java.io.File
 import Keys._
 import com.amazonaws._
-import auth._,services.s3._
-import model._
+import auth._, services.s3._
 import org.apache.commons.lang.StringUtils.removeEndIgnoreCase
 
 /**
@@ -181,29 +182,29 @@ object S3Plugin extends sbt.Plugin {
     z.mkString
   }
 
-  private def addProgressListener(request:AmazonWebServiceRequest { // structural
-                                    def setProgressListener(progressListener:ProgressListener):Unit
-                                  }, fileSize:Long, key:String) = request.setProgressListener(new ProgressListener() {
-    var uploadedBytes=0L
-    val fileName={
-      val area=30
-      val n=new File(key).getName()
-      val l=n.length()
-      if (l>area-3)
-        "..."+n.substring(l-area+3)
-      else
-        n
-    }
-    def progressChanged(progressEvent:ProgressEvent) {
-      if(progressEvent.getEventCode() == ProgressEvent.PART_COMPLETED_EVENT_CODE) {
-        uploadedBytes=uploadedBytes+progressEvent.getBytesTransfered()
+  private def addProgressListener(request: AmazonWebServiceRequest, fileSize: Long, key: String) = {
+    request.setGeneralProgressListener(new ProgressListener {
+      var uploadedBytes = 0L
+      val fileName = {
+        val area = 30
+        val n = new File(key).getName()
+        val l = n.length()
+        if (l > area - 3)
+          "..." + n.substring(l - area + 3)
+        else
+          n
       }
-      print(progressBar(if (fileSize>0) ((uploadedBytes*100)/fileSize).toInt else 100))
-      print(fileName)
-      if (progressEvent.getEventCode() == ProgressEvent.COMPLETED_EVENT_CODE)
-        println()
-    }
-  })
+      override def progressChanged(progressEvent: ProgressEvent): Unit = {
+        if (progressEvent.getEventType == ProgressEventType.REQUEST_BYTE_TRANSFER_EVENT) {
+          uploadedBytes = uploadedBytes + progressEvent.getBytesTransferred()
+        }
+        print(progressBar(if (fileSize > 0) ((uploadedBytes * 100) / fileSize).toInt else 100))
+        print(fileName)
+        if (progressEvent.getEventType == ProgressEventType.TRANSFER_COMPLETED_EVENT)
+          println()
+      }
+    })
+  }
 
   /*
    * Include the line {{{s3Settings}}} in your build.sbt file, in order to import the tasks defined by this S3 plugin.

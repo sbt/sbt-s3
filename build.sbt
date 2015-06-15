@@ -14,7 +14,7 @@ sbtPlugin := true
 
 startYear := Some(2013)
 
-libraryDependencies ++= Seq("com.amazonaws" % "aws-java-sdk" % "1.3.29",
+libraryDependencies ++= Seq("com.amazonaws" % "aws-java-sdk" % "1.9.40",
                             "commons-lang" % "commons-lang" % "2.6")
 
 scalacOptions in (Compile,doc) <++= (name,description,version,sourceDirectory) map {(n,d,v,s) =>
