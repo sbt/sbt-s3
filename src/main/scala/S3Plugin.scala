@@ -1,6 +1,6 @@
 package com.typesafe.sbt
 
-import com.amazonaws.event.{ProgressEventType, ProgressEvent, ProgressListener}
+import com.amazonaws.event.{ProgressEventType, ProgressEvent, SyncProgressListener}
 import com.amazonaws.services.s3.model.{GetObjectRequest, PutObjectRequest}
 import sbt.{File => _, _}
 import java.io.File
@@ -183,7 +183,7 @@ object S3Plugin extends sbt.Plugin {
   }
 
   private def addProgressListener(request: AmazonWebServiceRequest, fileSize: Long, key: String) = {
-    request.setGeneralProgressListener(new ProgressListener {
+    request.setGeneralProgressListener(new SyncProgressListener {
       var uploadedBytes = 0L
       val fileName = {
         val area = 30
@@ -195,7 +195,8 @@ object S3Plugin extends sbt.Plugin {
           n
       }
       override def progressChanged(progressEvent: ProgressEvent): Unit = {
-        if (progressEvent.getEventType == ProgressEventType.REQUEST_BYTE_TRANSFER_EVENT) {
+        if (progressEvent.getEventType == ProgressEventType.REQUEST_BYTE_TRANSFER_EVENT ||
+            progressEvent.getEventType == ProgressEventType.RESPONSE_BYTE_TRANSFER_EVENT) {
           uploadedBytes = uploadedBytes + progressEvent.getBytesTransferred()
         }
         print(progressBar(if (fileSize > 0) ((uploadedBytes * 100) / fileSize).toInt else 100))
