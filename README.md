@@ -56,3 +56,6 @@ You can also see progress while uploading:
     > s3-upload
     [==================================================]   100%   zipa.txt
     [=====================================>            ]    74%   zipb.jar
+
+If running under EC2, the credentials will be automatically obtained via IAM, unless
+explicitly provided as described above.

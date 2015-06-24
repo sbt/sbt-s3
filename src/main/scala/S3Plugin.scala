@@ -69,6 +69,7 @@ object S3Plugin extends sbt.Plugin {
     *   - ''host:'' the string specified by S3.host in S3.upload, see below
     *   - ''user:'' Access Key ID
     *   - ''password:'' Secret Access Key
+    *   If running under EC2, the credentials will automatically be provided via IAM.
     *  - ''mappings in S3.upload:'' the list of local files and S3 keys (pathnames), for example:
     *  `Seq((File("f1.txt"),"aaa/bbb/file1.txt"), ...)`
     *  - ''S3.host in S3.upload:'' the bucket name, in one of two forms:
@@ -87,6 +88,7 @@ object S3Plugin extends sbt.Plugin {
     *   - ''host:'' the string specified by S3.host in S3.download, see below
     *   - ''user:'' Access Key ID
     *   - ''password:'' Secret Access Key
+    *   If running under EC2, the credentials will automatically be provided via IAM.
     *  - ''mappings in S3.download:'' the list of local files and S3 keys (pathnames), for example:
     *  `Seq((File("f1.txt"),"aaa/bbb/file1.txt"), ...)`
     *  - ''S3.host in S3.download:'' the bucket name, in one of two forms:
@@ -105,6 +107,7 @@ object S3Plugin extends sbt.Plugin {
     *   - ''host:'' the string specified by S3.host in S3.delete, see below
     *   - ''user:'' Access Key ID
     *   - ''password:'' Secret Access Key
+    *   If running under EC2, the credentials will automatically be provided via IAM.
     *  - ''S3.keys in S3.delete:'' the list of S3 keys (pathnames), for example:
     *  `Seq("aaa/bbb/file1.txt", ...)`
     *  - ''S3.host in S3.delete:'' the bucket name, in one of two forms:
@@ -140,13 +143,19 @@ object S3Plugin extends sbt.Plugin {
   type Bucket=String
 
   private def getClient(creds:Seq[Credentials],host:String) = {
-    val cred = Credentials.forHost(creds, host) match {
-      case Some(cred) => cred
-      case None       => sys.error("Could not find S3 credentials for the host: "+host)
+    val credentials = Credentials.forHost(creds, host) match {
+      // username -> Access Key Id ; passwd -> Secret Access Key
+      case Some(cred) => new BasicAWSCredentials(cred.userName, cred.passwd)
+      case None       =>
+        val provider = new InstanceProfileCredentialsProvider
+        try {
+          provider.getCredentials()
+        } catch {
+          case e:com.amazonaws.AmazonClientException =>
+            sys.error("Could not find S3 credentials for the host: "+host+", and no IAM credentials available")
+        }
     }
-    // username -> Access Key Id ; passwd -> Secret Access Key
-    new AmazonS3Client(new BasicAWSCredentials(cred.userName, cred.passwd),
-                       new ClientConfiguration().withProtocol(Protocol.HTTPS))
+    new AmazonS3Client(credentials, new ClientConfiguration().withProtocol(Protocol.HTTPS))
   }
   private def getBucket(host:String) = removeEndIgnoreCase(host,".s3.amazonaws.com")
 
