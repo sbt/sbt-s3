@@ -57,5 +57,9 @@ You can also see progress while uploading:
     [==================================================]   100%   zipa.txt
     [=====================================>            ]    74%   zipb.jar
 
-If running under EC2, the credentials will be automatically obtained via IAM, unless
-explicitly provided as described above.
+Unless explicitly provided as described above, credentials will be obtained via (in order):
+
+1. `AWS_ACCESS_KEY_ID` and `AWS_SECRET_KEY` environment variables
+2. `aws.accessKeyId` and `aws.secretKey` Java system properties 
+3. Default aws cli credentials file (`~/.aws/credentials`)
+4. IAM instance profile if running under EC2.
