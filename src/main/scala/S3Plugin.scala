@@ -157,7 +157,7 @@ object S3Plugin extends sbt.Plugin {
     }
     new AmazonS3Client(credentials, new ClientConfiguration().withProtocol(Protocol.HTTPS))
   }
-  private def getBucket(host:String) = removeEndIgnoreCase(host,".s3.amazonaws.com")
+  private def getBucket(host:String) = host.takeWhile(_ != '.')
 
   private def s3InitTask[Item](thisTask:TaskKey[Unit], itemsKey:TaskKey[Seq[Item]],
                                op:(AmazonS3Client,Bucket,Item,Boolean)=>Unit,
