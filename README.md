@@ -39,12 +39,14 @@ build.sbt:
     credentials += Credentials(Path.userHome / ".s3credentials")
 
 If you want to set a region name, add `s3-<region>` to the host. So it should look like `bucket.s3-region.amazonaws.com`.
+
 It's `bucket` + `.s3-` + `region` + `.amazonaws.com`
 
 e.g.)
-Bucket: `my-test-bucket`
-Region: `ap-southeast-2`
-Then the `host` should be
+
+Bucket: `my-test-bucket`<br>
+Region: `ap-southeast-2`<br>
+Then the `host` should be<br>
 `my-test-bucket.s3-ap-southeast-2.amazonaws.com`
 
 ```scala
