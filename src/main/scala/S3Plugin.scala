@@ -147,7 +147,7 @@ object S3Plugin extends sbt.Plugin {
       // username -> Access Key Id ; passwd -> Secret Access Key
       case Some(cred) => new BasicAWSCredentials(cred.userName, cred.passwd)
       case None       =>
-        val provider = new InstanceProfileCredentialsProvider
+        val provider = new DefaultAWSCredentialsProviderChain
         try {
           provider.getCredentials()
         } catch {
