@@ -38,12 +38,52 @@ build.sbt:
 
     credentials += Credentials(Path.userHome / ".s3credentials")
 
-~/.s3credentials:
+If you want to set a region name, add `s3-<region>` to the host. So it should look like `bucket.s3-region.amazonaws.com`.
+
+It's `bucket` + `.s3-` + `region` + `.amazonaws.com`
+
+e.g.)
+
+Bucket: `my-test-bucket`<br>
+Region: `ap-southeast-2`<br>
+Then the `host` should be<br>
+`my-test-bucket.s3-ap-southeast-2.amazonaws.com`
+
+```scala
+import S3._
+
+s3Settings
+
+mappings in upload := Seq((new java.io.File("a"),"zipa.txt"),(new java.io.File("b"),"pongo/zipb.jar"))
+
+host in upload := "my-test-bucket.s3-ap-southeast-2.amazonaws.com"
+
+credentials += Credentials(Path.userHome / ".s3credentials")
+```
+
+More about the region/s endpoint location: http://www.bucketexplorer.com/documentation/amazon-s3--amazon-s3-buckets-and-regions.html
+
+You can set up the S3 access info in the `.s3credentials` file:
+
+`~/.s3credentials`:
 
     realm=Amazon S3
     host=s3sbt-test.s3.amazonaws.com
     user=<Access Key ID>
     password=<Secret Access Key>
+    
+To set it up in the `build.sbt` using environment variables,
+
+`build.sbt`:
+```scala
+credentials += Credentials(
+                 realm = "Amazon S3",
+                 host = "s3sbt-test.s3.amazonaws.com",
+                 userName = sys.env.getOrElse("AWS_ACCESS_KEY_ID", ""),
+                 passwd = sys.env.getOrElse("AWS_SECRET_ACCESS_KEY", "")
+               )
+```
+
 
 Just create two sample files called "a" and "b" in the same directory that contains build.sbt, then try:
 

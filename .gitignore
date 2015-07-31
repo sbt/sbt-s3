@@ -12,3 +12,7 @@ project/target/
 
 # Scala-IDE specific
 .scala_dependencies
+
+# IntelliJ IDEA specific
+.idea/
+
