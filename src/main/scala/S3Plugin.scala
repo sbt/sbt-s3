@@ -78,8 +78,10 @@ object S3Plugin extends sbt.Plugin {
     *   1. "mybucket", for instance in case the name is a fully qualified hostname used in a CNAME
     *
     * If you set logLevel to "Level.Debug", the list of files will be printed while uploading.
+    *
+    * Returns: the sequence of uploaded keys (pathnames).
     */
-    val upload=TaskKey[Unit]("s3-upload","Uploads files to an S3 bucket.")
+    val upload=TaskKey[Seq[String]]("s3-upload","Uploads files to an S3 bucket.")
 
   /**
     * The task "s3-download" downloads a set of files from a specificed S3 bucket.
@@ -97,8 +99,10 @@ object S3Plugin extends sbt.Plugin {
     *   1. "mybucket", for instance in case the name is a fully qualified hostname used in a CNAME
     *
     * If you set logLevel to "Level.Debug", the list of files will be printed while downloading.
+    *
+    * Returns: the sequence of downloaded files.
     */
-    val download=TaskKey[Unit]("s3-download","Downloads files from an S3 bucket.")
+    val download=TaskKey[Seq[File]]("s3-download","Downloads files from an S3 bucket.")
 
   /**
     * The task "s3-delete" deletes a set of files from a specificed S3 bucket.
@@ -116,8 +120,10 @@ object S3Plugin extends sbt.Plugin {
     *   1. "mybucket", for instance in case the name is a fully qualified hostname used in a CNAME
     *
     * If you set logLevel to "Level.Debug", the list of keys will be printed while the S3 objects are being deleted.
+    *
+    * Returns: the sequence of deleted keys (pathnames).
     */
-    val delete=TaskKey[Unit]("s3-delete","Delete files from an S3 bucket.")
+    val delete=TaskKey[Seq[String]]("s3-delete","Delete files from an S3 bucket.")
 
   /**
     * A string representing the S3 bucket name, in one of two forms:
@@ -163,20 +169,21 @@ object S3Plugin extends sbt.Plugin {
   }
   private def getBucket(host:String) = removeEndIgnoreCase(host,".s3.amazonaws.com")
 
-  private def s3InitTask[Item,Extra](thisTask:TaskKey[Unit], itemsKey:TaskKey[Seq[Item]],
-                                     extra:SettingKey[Extra], // may be unused (a dummy value)
-                                     op:(AmazonS3Client,Bucket,Item,Extra,Boolean)=>Unit,
-                                     msg:(Bucket,Item)=>String, lastMsg:(Bucket,Seq[Item])=>String )  =
+  private def s3InitTask[Item,Extra,Return](thisTask:TaskKey[Seq[Return]], itemsKey:TaskKey[Seq[Item]],
+                                            extra:SettingKey[Extra], // may be unused (a dummy value)
+                                            op:(AmazonS3Client,Bucket,Item,Extra,Boolean)=>Return,
+                                            msg:(Bucket,Item)=>String, lastMsg:(Bucket,Seq[Item])=>String )  =
 
     (credentials in thisTask, itemsKey in thisTask, host in thisTask, extra in thisTask, progress in thisTask, streams) map {
       (creds,items,host,extra,progress,streams) =>
         val client = getClient(creds, host)
         val bucket = getBucket(host)
-        items foreach { item =>
+        val ret = items map { item =>
           streams.log.debug(msg(bucket,item))
           op(client,bucket,item,extra,progress)
         }
         streams.log.info(lastMsg(bucket,items))
+        ret
     }
 
 
@@ -230,29 +237,31 @@ object S3Plugin extends sbt.Plugin {
    */
   val s3Settings = Seq(
 
-    upload <<= s3InitTask[(File,String),MetadataMap](upload, mappings, metadata,
+    upload <<= s3InitTask[(File,String),MetadataMap,String](upload, mappings, metadata,
                            { case (client,bucket,(file,key),metadata,progress) =>
                                val request=new PutObjectRequest(bucket,key,file)
                                if (progress) addProgressListener(request,file.length(),key)
                                client.putObject(metadata.get(key).map(request.withMetadata(_)).getOrElse(request))
+                               key
                            },
                            { case (bucket,(file,key)) =>  "Uploading "+file.getAbsolutePath()+" as "+key+" into "+bucket },
                            {      (bucket,mapps) =>       prettyLastMsg("Uploaded", mapps.map(_._2), "to", bucket) }
                          ),
 
-    download <<= s3InitTask[(File,String),Unit](download, mappings, dummy,
+    download <<= s3InitTask[(File,String),Unit,File](download, mappings, dummy,
                            { case (client,bucket,(file,key),_,progress) =>
                                val request=new GetObjectRequest(bucket,key)
                                val objectMetadata=client.getObjectMetadata(bucket,key)
                                if (progress) addProgressListener(request,objectMetadata.getContentLength(),key)
                                client.getObject(request,file)
+                               file
                            },
                            { case (bucket,(file,key)) =>  "Downloading "+file.getAbsolutePath()+" as "+key+" from "+bucket },
                            {      (bucket,mapps) =>       prettyLastMsg("Downloaded", mapps.map(_._2), "from", bucket) }
                          ),
 
-    delete <<= s3InitTask[String,Unit](delete, keys, dummy,
-                           { (client,bucket,key,_,_) => client.deleteObject(bucket,key) },
+    delete <<= s3InitTask[String,Unit,String](delete, keys, dummy,
+                           { (client,bucket,key,_,_) => client.deleteObject(bucket,key); key },
                            { (bucket,key) =>          "Deleting "+key+" from "+bucket },
                            { (bucket,keys1) =>        prettyLastMsg("Deleted", keys1, "from", bucket) }
                          ),
