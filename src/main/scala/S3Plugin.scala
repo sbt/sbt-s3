@@ -1,7 +1,7 @@
 package com.typesafe.sbt
 
 import com.amazonaws.event.{ProgressEventType, ProgressEvent, SyncProgressListener}
-import com.amazonaws.services.s3.model.{GetObjectRequest, PutObjectRequest}
+import com.amazonaws.services.s3.model.{GetObjectRequest, PutObjectRequest, ObjectMetadata}
 import sbt.{File => _, _}
 import java.io.File
 import Keys._
