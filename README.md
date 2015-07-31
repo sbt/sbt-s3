@@ -67,7 +67,7 @@ Unless explicitly provided as described above, credentials will be obtained via 
 ## Example 2
 
 As well as simply uploading a file to s3 you can also set some s3 ObjectMetadata.
-For example, you may want to gzip a CSS file for quicker download but still have it's content type as css,
+For example, you may want to gzip a CSS file for quicker download but still have its content type as css,
 In which case you need to set the Content-Type and Content-Encoding, a small change to
 build.sbt is all that is needed.
 
@@ -77,7 +77,7 @@ build.sbt:
 
     s3Settings
 
-    Seq((target.value / "web" / "stage" / "css" / "style-group2.css.gz" ,"css/style-group2.css"))
+    mappings in upload := Seq((target.value / "web" / "stage" / "css" / "style-group2.css.gz" ,"css/style-group2.css"))
 
     val md = {
       import com.amazonaws.services.s3.model.ObjectMetadata
