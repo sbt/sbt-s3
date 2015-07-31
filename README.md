@@ -18,7 +18,7 @@ All these operations will use HTTPS as a transport protocol.
 Please check the Scaladoc API of the `S3Plugin` object, and of its nested `S3` object,
 to get additional documentation of the available sbt tasks.
 
-## Example
+## Example 1
 
 Here is a complete example:
 
@@ -63,3 +63,34 @@ Unless explicitly provided as described above, credentials will be obtained via 
 2. `aws.accessKeyId` and `aws.secretKey` Java system properties 
 3. Default aws cli credentials file (`~/.aws/credentials`)
 4. IAM instance profile if running under EC2.
+
+## Example 2
+
+As well as simply uploading a file to s3 you can also set some s3 ObjectMetadata.
+For example, you may want to gzip a CSS file for quicker download but still have its content type as css,
+In which case you need to set the Content-Type and Content-Encoding, a small change to
+build.sbt is all that is needed.
+
+build.sbt:
+
+    import S3._
+
+    s3Settings
+
+    mappings in upload := Seq((target.value / "web" / "stage" / "css" / "style-group2.css.gz" ,"css/style-group2.css"))
+
+    val md = {
+      import com.amazonaws.services.s3.model.ObjectMetadata
+      var omd = new ObjectMetadata()
+      omd.setContentEncoding("gzip")
+      omd.setContentType("text/css")
+      omd
+    }
+
+    metadata in upload := Map("css/style-group2.css" -> md)
+
+    host in upload := "s3sbt-test.s3.amazonaws.com"
+
+    credentials += Credentials(Path.userHome / ".s3credentials")
+
+    metadata in upload

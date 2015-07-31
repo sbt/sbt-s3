@@ -1,7 +1,7 @@
 package com.typesafe.sbt
 
 import com.amazonaws.event.{ProgressEventType, ProgressEvent, SyncProgressListener}
-import com.amazonaws.services.s3.model.{GetObjectRequest, PutObjectRequest}
+import com.amazonaws.services.s3.model.{GetObjectRequest, PutObjectRequest, ObjectMetadata}
 import sbt.{File => _, _}
 import java.io.File
 import Keys._
@@ -56,6 +56,7 @@ import org.apache.commons.lang.StringUtils.removeEndIgnoreCase
   */
 object S3Plugin extends sbt.Plugin {
 
+  type MetadataMap = Map[String, ObjectMetadata]
   /**
     * This nested object defines the sbt keys made available by the S3Plugin: read here for tasks info.
     */
@@ -136,6 +137,9 @@ object S3Plugin extends sbt.Plugin {
     */
     val progress=SettingKey[Boolean]("s3-progress","Set to true to get a progress indicator during S3 uploads/downloads (default false).")
 
+    val metadata=SettingKey[MetadataMap]("s3-metadata","Mapping from S3 keys (pathnames) to the corresponding metadata")
+
+    private[S3Plugin] val dummy=SettingKey[Unit]("dummy-internal","Dummy setting")
   }
 
   import S3._
@@ -159,17 +163,18 @@ object S3Plugin extends sbt.Plugin {
   }
   private def getBucket(host:String) = removeEndIgnoreCase(host,".s3.amazonaws.com")
 
-  private def s3InitTask[Item](thisTask:TaskKey[Unit], itemsKey:TaskKey[Seq[Item]],
-                               op:(AmazonS3Client,Bucket,Item,Boolean)=>Unit,
-                               msg:(Bucket,Item)=>String, lastMsg:(Bucket,Seq[Item])=>String )  =
+  private def s3InitTask[Item,Extra](thisTask:TaskKey[Unit], itemsKey:TaskKey[Seq[Item]],
+                                     extra:SettingKey[Extra], // may be unused (a dummy value)
+                                     op:(AmazonS3Client,Bucket,Item,Extra,Boolean)=>Unit,
+                                     msg:(Bucket,Item)=>String, lastMsg:(Bucket,Seq[Item])=>String )  =
 
-    (credentials in thisTask, itemsKey in thisTask, host in thisTask, progress in thisTask, streams) map {
-      (creds,items,host,progress,streams) =>
+    (credentials in thisTask, itemsKey in thisTask, host in thisTask, extra in thisTask, progress in thisTask, streams) map {
+      (creds,items,host,extra,progress,streams) =>
         val client = getClient(creds, host)
         val bucket = getBucket(host)
         items foreach { item =>
           streams.log.debug(msg(bucket,item))
-          op(client,bucket,item,progress)
+          op(client,bucket,item,extra,progress)
         }
         streams.log.info(lastMsg(bucket,items))
     }
@@ -225,18 +230,18 @@ object S3Plugin extends sbt.Plugin {
    */
   val s3Settings = Seq(
 
-    upload <<= s3InitTask[(File,String)](upload, mappings,
-                           { case (client,bucket,(file,key),progress) =>
+    upload <<= s3InitTask[(File,String),MetadataMap](upload, mappings, metadata,
+                           { case (client,bucket,(file,key),metadata,progress) =>
                                val request=new PutObjectRequest(bucket,key,file)
                                if (progress) addProgressListener(request,file.length(),key)
-                               client.putObject(request)
+                               client.putObject(metadata.get(key).map(request.withMetadata(_)).getOrElse(request))
                            },
                            { case (bucket,(file,key)) =>  "Uploading "+file.getAbsolutePath()+" as "+key+" into "+bucket },
                            {      (bucket,mapps) =>       prettyLastMsg("Uploaded", mapps.map(_._2), "to", bucket) }
                          ),
 
-    download <<= s3InitTask[(File,String)](download, mappings,
-                           { case (client,bucket,(file,key),progress) =>
+    download <<= s3InitTask[(File,String),Unit](download, mappings, dummy,
+                           { case (client,bucket,(file,key),_,progress) =>
                                val request=new GetObjectRequest(bucket,key)
                                val objectMetadata=client.getObjectMetadata(bucket,key)
                                if (progress) addProgressListener(request,objectMetadata.getContentLength(),key)
@@ -246,16 +251,18 @@ object S3Plugin extends sbt.Plugin {
                            {      (bucket,mapps) =>       prettyLastMsg("Downloaded", mapps.map(_._2), "from", bucket) }
                          ),
 
-    delete <<= s3InitTask[String](delete, keys,
-                           { (client,bucket,key,_) => client.deleteObject(bucket,key) },
+    delete <<= s3InitTask[String,Unit](delete, keys, dummy,
+                           { (client,bucket,key,_,_) => client.deleteObject(bucket,key) },
                            { (bucket,key) =>          "Deleting "+key+" from "+bucket },
                            { (bucket,keys1) =>        prettyLastMsg("Deleted", keys1, "from", bucket) }
                          ),
 
     host := "",
     keys := Seq(),
+    metadata := Map(),
     mappings in download := Seq(),
     mappings in upload := Seq(),
-    progress := false
+    progress := false,
+    dummy := ()
   )
 }
