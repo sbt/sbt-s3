@@ -1,7 +1,7 @@
 package com.typesafe.sbt
 
 import com.amazonaws.event.{ProgressEventType, ProgressEvent, SyncProgressListener}
-import com.amazonaws.services.s3.model.{GetObjectRequest, PutObjectRequest, ObjectMetadata}
+import com.amazonaws.services.s3.model.{GeneratePresignedUrlRequest, GetObjectRequest, PutObjectRequest, ObjectMetadata}
 import sbt.{File => _, _}
 import java.io.File
 import Keys._
@@ -126,6 +126,27 @@ object S3Plugin extends sbt.Plugin {
     val delete=TaskKey[Seq[String]]("s3-delete","Delete files from an S3 bucket.")
 
   /**
+    * The task "s3-generate-link" create a link for set of files in a S3 bucket.
+    * Depends on:
+    *  - ''credentials in S3.upload:'' security credentials used to access the S3 bucket, as follows:
+    *   - ''realm:'' "Amazon S3"
+    *   - ''host:'' the string specified by S3.host in S3.upload, see below
+    *   - ''user:'' Access Key ID
+    *   - ''password:'' Secret Access Key
+    *   If running under EC2, the credentials will automatically be provided via IAM.
+    *  - ''keys in S3.upload:'' the list of remote files, for example:
+    *  `Seq("aaa/bbb/file1.txt", ...)`
+    *  - ''S3.host in S3.generateLink:'' the bucket name, in one of two forms:
+    *   1. "mybucket.s3.amazonaws.com", where "mybucket" is the bucket name, or
+    *   1. "mybucket", for instance in case the name is a fully qualified hostname used in a CNAME
+    *
+    * If you set logLevel to "Level.Debug", the list of files will be printed while uploading.
+    *
+    * Returns: the URL generated.
+    */
+    val generateLink=TaskKey[Seq[URL]]("s3-generateLink","Uploads files to an S3 bucket.")
+
+  /**
     * A string representing the S3 bucket name, in one of two forms:
     *  1. "mybucket.s3.amazonaws.com", where "mybucket" is the bucket name, or
     *  1. "mybucket", for instance in case the name is a fully qualified hostname used in a CNAME
@@ -144,6 +165,8 @@ object S3Plugin extends sbt.Plugin {
     val progress=SettingKey[Boolean]("s3-progress","Set to true to get a progress indicator during S3 uploads/downloads (default false).")
 
     val metadata=SettingKey[MetadataMap]("s3-metadata","Mapping from S3 keys (pathnames) to the corresponding metadata")
+
+    val expirationDate=SettingKey[java.util.Date]("s3-expirationDate", "Expiration date for the generated link")
 
     private[S3Plugin] val dummy=SettingKey[Unit]("dummy-internal","Dummy setting")
   }
@@ -170,17 +193,17 @@ object S3Plugin extends sbt.Plugin {
   private def getBucket(host:String) = removeEndIgnoreCase(host,".s3.amazonaws.com")
 
   private def s3InitTask[Item,Extra,Return](thisTask:TaskKey[Seq[Return]], itemsKey:TaskKey[Seq[Item]],
-                                            extra:SettingKey[Extra], // may be unused (a dummy value)
-                                            op:(AmazonS3Client,Bucket,Item,Extra,Boolean)=>Return,
-                                            msg:(Bucket,Item)=>String, lastMsg:(Bucket,Seq[Item])=>String )  =
+    extra:SettingKey[Extra], // may be unused (a dummy value)
+    op:(AmazonS3Client,Bucket,Item,Extra,Boolean,java.util.Date)=>Return,
+    msg:(Bucket,Item)=>String, lastMsg:(Bucket,Seq[Item])=>String )  =
 
-    (credentials in thisTask, itemsKey in thisTask, host in thisTask, extra in thisTask, progress in thisTask, streams) map {
-      (creds,items,host,extra,progress,streams) =>
+    (credentials in thisTask, itemsKey in thisTask, host in thisTask, extra in thisTask, progress in thisTask, expirationDate in thisTask, streams) map {
+      (creds,items,host,extra,progress,expirationDate,streams) =>
         val client = getClient(creds, host)
         val bucket = getBucket(host)
         val ret = items map { item =>
           streams.log.debug(msg(bucket,item))
-          op(client,bucket,item,extra,progress)
+          op(client,bucket,item,extra,progress,expirationDate)
         }
         streams.log.info(lastMsg(bucket,items))
         ret
@@ -238,7 +261,7 @@ object S3Plugin extends sbt.Plugin {
   val s3Settings = Seq(
 
     upload <<= s3InitTask[(File,String),MetadataMap,String](upload, mappings, metadata,
-                           { case (client,bucket,(file,key),metadata,progress) =>
+                           { case (client,bucket,(file,key),metadata,progress,_) =>
                                val request=new PutObjectRequest(bucket,key,file)
                                if (progress) addProgressListener(request,file.length(),key)
                                client.putObject(metadata.get(key).map(request.withMetadata(_)).getOrElse(request))
@@ -249,7 +272,7 @@ object S3Plugin extends sbt.Plugin {
                          ),
 
     download <<= s3InitTask[(File,String),Unit,File](download, mappings, dummy,
-                           { case (client,bucket,(file,key),_,progress) =>
+                           { case (client,bucket,(file,key),_,progress,_) =>
                                val request=new GetObjectRequest(bucket,key)
                                val objectMetadata=client.getObjectMetadata(bucket,key)
                                if (progress) addProgressListener(request,objectMetadata.getContentLength(),key)
@@ -261,9 +284,22 @@ object S3Plugin extends sbt.Plugin {
                          ),
 
     delete <<= s3InitTask[String,Unit,String](delete, keys, dummy,
-                           { (client,bucket,key,_,_) => client.deleteObject(bucket,key); key },
+                           { (client,bucket,key,_,_,_) => client.deleteObject(bucket,key); key },
                            { (bucket,key) =>          "Deleting "+key+" from "+bucket },
                            { (bucket,keys1) =>        prettyLastMsg("Deleted", keys1, "from", bucket) }
+                         ),
+
+    generateLink <<= s3InitTask[String,Unit,URL](generateLink, keys, dummy,
+                           { (client,bucket,key,_,_,date) =>
+                               val request = new GeneratePresignedUrlRequest(bucket, key)
+                               request.setMethod(HttpMethod.GET)
+                               request.setExpiration(date)
+                               val url = client.generatePresignedUrl(request)
+                               println(s"$key link: $url")
+                               url
+                           },
+                           { (bucket,key) =>          s"Creating link for $key in $bucket" },
+                           { (bucket,keys1) =>        prettyLastMsg("Generated link", keys1, "from", bucket) }
                          ),
 
     host := "",
@@ -272,6 +308,7 @@ object S3Plugin extends sbt.Plugin {
     mappings in download := Seq(),
     mappings in upload := Seq(),
     progress := false,
+    expirationDate := new java.util.Date(),
     dummy := ()
   )
 }
