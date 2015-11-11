@@ -143,7 +143,7 @@ object S3Plugin extends sbt.Plugin {
     *
     * If you set logLevel to "Level.Debug", the list of files will be printed while uploading.
     *
-    * Returns: the URL generated.
+    * Returns: the sequence of generated URLs.
     */
     val generateLink=TaskKey[Seq[URL]]("s3-generateLink","Uploads files to an S3 bucket.")
 
