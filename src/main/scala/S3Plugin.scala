@@ -241,7 +241,7 @@ object S3Plugin extends sbt.Plugin {
                            { case (client,bucket,(file,key),metadata,progress) =>
                                val request=new PutObjectRequest(bucket,key,file)
                                if (progress) addProgressListener(request,file.length(),key)
-                               client.putObject(metadata.get(key).map(request.withMetadata(_)).getOrElse(request))
+                               client.putObject(metadata.get(key).map(request.withMetadata).getOrElse(request))
                                key
                            },
                            { case (bucket,(file,key)) =>  "Uploading "+file.getAbsolutePath()+" as "+key+" into "+bucket },

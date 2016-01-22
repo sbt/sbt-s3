@@ -79,7 +79,7 @@ build.sbt:
 
     mappings in upload := Seq((target.value / "web" / "stage" / "css" / "style-group2.css.gz" ,"css/style-group2.css"))
 
-    val md = {
+    def md = {
       import com.amazonaws.services.s3.model.ObjectMetadata
       var omd = new ObjectMetadata()
       omd.setContentEncoding("gzip")
