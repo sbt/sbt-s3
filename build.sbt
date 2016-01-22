@@ -4,7 +4,9 @@ name := "sbt-s3"
 
 description := "S3 Plugin for sbt"
 
-version := "0.8"
+version := "0.9-SNAPSHOT"
+
+isSnapshot := true
 
 organization := "com.typesafe.sbt"
 
@@ -14,7 +16,7 @@ sbtPlugin := true
 
 startYear := Some(2013)
 
-libraryDependencies ++= Seq("com.amazonaws" % "aws-java-sdk-s3" % "1.10.0",
+libraryDependencies ++= Seq("com.amazonaws" % "aws-java-sdk-s3" % "1.10.47",
                             "commons-lang" % "commons-lang" % "2.6")
 
 scalacOptions in (Compile,doc) <++= (name,description,version,sourceDirectory) map {(n,d,v,s) =>
@@ -22,9 +24,9 @@ scalacOptions in (Compile,doc) <++= (name,description,version,sourceDirectory) m
 
 publishMavenStyle := false
 
-sbtVersion in Global := "0.13.1"
+sbtVersion in Global := "0.13.9"
 
-scalaVersion in Global := "2.10.3"
+scalaVersion in Global := "2.10.5"
 
 bintrayPublishSettings
 
