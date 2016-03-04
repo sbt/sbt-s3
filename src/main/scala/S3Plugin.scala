@@ -185,6 +185,19 @@ object S3Plugin extends sbt.Plugin {
 
   type Bucket=String
 
+  private def makeProxyableClientConfiguration(): ClientConfiguration = {
+    def doWith(prop: String)(f: String => Unit): Unit = {
+      sys.props.get(prop).foreach(f)
+    }
+
+    val config = new ClientConfiguration().withProtocol(Protocol.HTTPS)
+    doWith("http.proxyHost")(config.setProxyHost)
+    doWith("http.proxyPort")(port => config.setProxyPort(port.toInt))
+    doWith("http.proxyUser")(config.setProxyUsername)
+    doWith("http.proxyPassword")(config.setProxyPassword)
+    config
+  }
+
   private def getClient(creds:Seq[Credentials],host:String) = {
     val credentials = Credentials.forHost(creds, host) match {
       // username -> Access Key Id ; passwd -> Secret Access Key
@@ -198,7 +211,7 @@ object S3Plugin extends sbt.Plugin {
             sys.error("Could not find S3 credentials for the host: "+host+", and no IAM credentials available")
         }
     }
-    new AmazonS3Client(credentials, new ClientConfiguration().withProtocol(Protocol.HTTPS))
+    new AmazonS3Client(credentials, makeProxyableClientConfiguration())
   }
 
   // if present, remove the suffix .s3*.amazonaws.com
