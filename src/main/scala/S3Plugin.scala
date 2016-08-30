@@ -1,9 +1,10 @@
 package com.typesafe.sbt
 
 import com.amazonaws.event.{ProgressEventType, ProgressEvent, SyncProgressListener}
-import com.amazonaws.services.s3.model.{GetObjectRequest, PutObjectRequest, ObjectMetadata}
+import com.amazonaws.services.s3.model.{GeneratePresignedUrlRequest, GetObjectRequest, PutObjectRequest, ObjectMetadata}
 import sbt.{File => _, _}
 import java.io.File
+import java.util.Date
 import Keys._
 import com.amazonaws._
 import auth._, services.s3._
@@ -94,7 +95,7 @@ object S3Plugin extends sbt.Plugin {
     *   If running under EC2, the credentials will automatically be provided via IAM.
     *  - ''mappings in S3.download:'' the list of local files and S3 keys (pathnames), for example:
     *  `Seq((File("f1.txt"),"aaa/bbb/file1.txt"), ...)`
-    *  - ''S3.host in S3.download:'' the bucket name, in one of two forms:
+    *  - ''S3.host in S3.download'': the bucket name, in one of two forms:
     *   1. "mybucket.s3.amazonaws.com", where "mybucket" is the bucket name, or
     *   1. "mybucket", for instance in case the name is a fully qualified hostname used in a CNAME
     *
@@ -126,6 +127,29 @@ object S3Plugin extends sbt.Plugin {
     val delete=TaskKey[Seq[String]]("s3-delete","Delete files from an S3 bucket.")
 
   /**
+    * The task "s3-generate-link" creates a link for set of files in a S3 bucket.
+    * Depends on:
+    *  - ''credentials in S3.generateLink:'' security credentials used to access the S3 bucket, as follows:
+    *   - ''realm:'' "Amazon S3"
+    *   - ''host:'' the string specified by S3.host in S3.upload, see below
+    *   - ''user:'' Access Key ID
+    *   - ''password:'' Secret Access Key
+    *   If running under EC2, the credentials will automatically be provided via IAM.
+    *  - ''keys in S3.upload:'' the list of remote files, for example:
+    *  `Seq("aaa/bbb/file1.txt", ...)`
+    *  - ''expirationDate in S3.generateLink:'' the expiration date at which point the
+    *   pre-signed URL will no longer be accepted by Amazon S3. It must be specified.
+    *  - ''S3.host in S3.generateLink'': the bucket name, in one of two forms:
+    *   1. "mybucket.s3.amazonaws.com", where "mybucket" is the bucket name, or
+    *   1. "mybucket", for instance in case the name is a fully qualified hostname used in a CNAME
+    *
+    * If you set logLevel to "Level.Debug", the list of files will be printed while uploading.
+    *
+    * Returns: the sequence of generated URLs.
+    */
+    val generateLink=TaskKey[Seq[URL]]("s3-generate-link","Creates links to a set of files in an S3 bucket.")
+
+  /**
     * A string representing the S3 bucket name, in one of two forms:
     *  1. "mybucket.s3.amazonaws.com", where "mybucket" is the bucket name, or
     *  1. "mybucket", for instance in case the name is a fully qualified hostname used in a CNAME
@@ -144,6 +168,8 @@ object S3Plugin extends sbt.Plugin {
     val progress=SettingKey[Boolean]("s3-progress","Set to true to get a progress indicator during S3 uploads/downloads (default false).")
 
     val metadata=SettingKey[MetadataMap]("s3-metadata","Mapping from S3 keys (pathnames) to the corresponding metadata")
+
+    val expirationDate=SettingKey[java.util.Date]("s3-expiration-date", "Expiration date for the generated link")
 
     private[S3Plugin] val dummy=SettingKey[Unit]("dummy-internal","Dummy setting")
   }
@@ -266,12 +292,26 @@ object S3Plugin extends sbt.Plugin {
                            { (bucket,keys1) =>        prettyLastMsg("Deleted", keys1, "from", bucket) }
                          ),
 
+    generateLink <<= s3InitTask[String,Date,URL](generateLink, keys, expirationDate,
+                           { (client,bucket,key,date,_) =>
+                               val request = new GeneratePresignedUrlRequest(bucket, key)
+                               request.setMethod(HttpMethod.GET)
+                               request.setExpiration(date)
+                               val url = client.generatePresignedUrl(request)
+                               println(s"$key link: $url")
+                               url
+                           },
+                           { (bucket,key) =>          s"Creating link for $key in $bucket" },
+                           { (bucket,keys1) =>        prettyLastMsg("Generated link", keys1, "from", bucket) }
+                         ),
+
     host := "",
     keys := Seq(),
     metadata := Map(),
     mappings in download := Seq(),
     mappings in upload := Seq(),
     progress := false,
+    expirationDate := new java.util.Date(),
     dummy := ()
   )
 }
