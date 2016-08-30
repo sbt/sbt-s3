@@ -11,12 +11,12 @@
 * then add to your build.sbt the line:
    `s3Settings`
  
-You will then be able to use the tasks s3-upload, s3-download, and s3-delete, defined
-in the nested object `com.typesafe.sbt.S3Plugin.S3` as upload, download, and delete, respectively.
+You will then be able to use the tasks s3-upload, s3-download, s3-delete, and s3-generate-link, defined
+in the nested object `com.typesafe.sbt.S3Plugin.S3` as upload, download, delete, and generateLink respectively.
 All these operations will use HTTPS as a transport protocol.
  
 Please check the Scaladoc API of the `S3Plugin` object, and of its nested `S3` object,
-to get additional documentation of the available sbt tasks.
+to get additional documentation on the available sbt tasks, and their parameters.
 
 ## Example 1
 
