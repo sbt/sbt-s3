@@ -94,3 +94,8 @@ build.sbt:
     credentials += Credentials(Path.userHome / ".s3credentials")
 
     metadata in upload
+
+
+## License
+
+This code is open source software licensed under the <a href="http://www.apache.org/licenses/LICENSE-2.0.html">Apache 2.0 License</a>.
