@@ -9,6 +9,8 @@ import Keys._
 import com.amazonaws._
 import auth._, services.s3._
 import org.apache.commons.lang.StringUtils.removeEndIgnoreCase
+import java.util.regex.Pattern
+import java.util.regex.Pattern.CASE_INSENSITIVE
 
 /**
   * S3Plugin is a simple sbt plugin that can manipulate objects on Amazon S3.
@@ -193,15 +195,10 @@ object S3Plugin extends sbt.Plugin {
     }
     new AmazonS3Client(credentials, new ClientConfiguration().withProtocol(Protocol.HTTPS))
   }
-  private def getBucket(host:String) = {
-    val dotS3DashIndex = host.lastIndexOf(".s3-")
-    if (dotS3DashIndex >= 0) {
-      host.take(dotS3DashIndex)
-    } else {
-      val dotS3DotIndex = host.lastIndexOf(".s3.")
-      if (dotS3DotIndex >= 0) host.take(dotS3DotIndex) else host
-    }
-  }
+
+  // if present, remove the suffix .s3*.amazonaws.com
+  private val pattern = Pattern.compile("\\.s3[^\\.]*\\.amazonaws\\.com$",Pattern.CASE_INSENSITIVE)
+  private def getBucket(host:String) = pattern.split(host)(0)
 
   private def s3InitTask[Item,Extra,Return](thisTask:TaskKey[Seq[Return]], itemsKey:TaskKey[Seq[Item]],
                                             extra:SettingKey[Extra], // may be unused (a dummy value)
