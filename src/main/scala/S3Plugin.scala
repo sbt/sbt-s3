@@ -132,9 +132,9 @@ object S3Plugin extends sbt.Plugin {
     val delete=TaskKey[Seq[String]]("s3-delete","Delete files from an S3 bucket.")
 
   /**
-    * The task "s3-generate-link" creates a link for set of files in a S3 bucket.
+    * The task "s3-generate-links" creates a link for set of files in a S3 bucket.
     * Depends on:
-    *  - ''credentials in S3.generateLink'': security credentials used to access the S3 bucket, as follows:
+    *  - ''credentials in S3.generateLinks'': security credentials used to access the S3 bucket, as follows:
     *   - ''realm'': "Amazon S3"
     *   - ''host'': the string specified by S3.host in S3.upload, see below
     *   - ''user'': Access Key ID
@@ -142,9 +142,9 @@ object S3Plugin extends sbt.Plugin {
     *   If running under EC2, the credentials will automatically be provided via IAM.
     *  - ''keys in S3.upload'': the list of remote files, for example:
     *  `Seq("aaa/bbb/file1.txt", ...)`
-    *  - ''expirationDate in S3.generateLink'': the expiration date at which point the
+    *  - ''expirationDate in S3.generateLinks'': the expiration date at which point the
     *   pre-signed URL will no longer be accepted by Amazon S3. It must be specified.
-    *  - ''S3.host in S3.generateLink'': the bucket name, in one of these forms:
+    *  - ''S3.host in S3.generateLinks'': the bucket name, in one of these forms:
     *   1. "mybucket.s3.amazonaws.com", where "mybucket" is the bucket name, or
     *   1. "mybucket.s3-myregion.amazonaws.com", where "myregion" is the region name, or
     *   1. "mybucket", for instance in case the name is a fully qualified hostname used in a CNAME
@@ -153,7 +153,7 @@ object S3Plugin extends sbt.Plugin {
     *
     * Returns: the sequence of generated URLs.
     */
-    val generateLink=TaskKey[Seq[URL]]("s3-generate-link","Creates links to a set of files in an S3 bucket.")
+    val generateLinks=TaskKey[Seq[URL]]("s3-generate-links","Creates links to a set of files in an S3 bucket.")
 
   /**
     * A string representing the S3 bucket name, in one of these forms:
@@ -315,7 +315,7 @@ object S3Plugin extends sbt.Plugin {
                            { (bucket,keys1) =>        prettyLastMsg("Deleted", keys1, "from", bucket) }
                          ),
 
-    generateLink <<= s3InitTask[String,Date,URL](generateLink, keys, expirationDate,
+    generateLinks <<= s3InitTask[String,Date,URL](generateLinks, keys, expirationDate,
                            { (client,bucket,key,date,_) =>
                                val request = new GeneratePresignedUrlRequest(bucket, key)
                                request.setMethod(HttpMethod.GET)
