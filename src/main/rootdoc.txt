@@ -3,12 +3,12 @@
 '''sbt-s3''' is a simple sbt plugin that can manipulate objects on Amazon S3.
 == Usage ==
   - add to your project/plugin.sbt the line:
-   {{{addSbtPlugin("com.typesafe.sbt" % "sbt-s3" % "0.8")}}}
+   {{{addSbtPlugin("com.typesafe.sbt" % "sbt-s3" % "0.9")}}}
   - then add to your build.sbt the line:
    {{{s3Settings}}}
  
- You will then be able to use the tasks s3-upload, s3-download, and s3-delete, defined
- in the nested object com.typesafe.sbt.S3Plugin.S3 as upload, download, and delete, respectively.
+ You will then be able to use the tasks s3-upload, s3-download, s3-delete, and s3-generate-link, defined
+ in the nested object com.typesafe.sbt.S3Plugin.S3 as upload, download, delete, and generateLink respectively.
  All these operations will use HTTPS as a transport protocol.
  
  Please select the `S3Plugin` object, to the left, and then the nested `S3` object link, for a complete example
