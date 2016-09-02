@@ -1,12 +1,12 @@
-name := "sbt-s3"
+name := "sbts3"
 
 description := "S3 Plugin for sbt"
 
-version := "0.9"
+version := "0.10-SNAPSHOT"
 
-isSnapshot := false
+isSnapshot := true
 
-organization := "com.typesafe.sbt"
+organization := "com.github.sbt"
 
 organizationName := "Typesafe"
 
