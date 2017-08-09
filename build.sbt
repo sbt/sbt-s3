@@ -22,7 +22,7 @@ scalacOptions in (Compile,doc) <++= (name,description,version,sourceDirectory) m
 
 publishMavenStyle := false
 
-scalaVersion in Global := "2.10.6"
+crossSbtVersions := Seq("0.13.16", "1.0.0-RC3")
 
 bintrayRepository := "sbt-plugins"
 
