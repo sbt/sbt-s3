@@ -29,9 +29,9 @@ import org.apache.commons.lang.StringUtils.removeEndIgnoreCase
   *
   * enablePlugins(S3Plugin)
   *
-  * mappings in upload := Seq((new java.io.File("a"),"zipa.txt"),(new java.io.File("b"),"pongo/zipb.jar"))
+  * mappings in s3Upload := Seq((new java.io.File("a"),"zipa.txt"),(new java.io.File("b"),"pongo/zipb.jar"))
   *
-  * host in upload := "s3sbt-test.s3.amazonaws.com"
+  * s3Host in s3Upload := "s3sbt-test.s3.amazonaws.com"
   *
   * credentials += Credentials(Path.userHome / ".s3credentials")
   * }}}
