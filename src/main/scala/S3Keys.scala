@@ -1,6 +1,13 @@
 package com.typesafe.sbt
 
+import sbt._
+
+import com.amazonaws.services.s3.model.ObjectMetadata
+
 trait S3Keys {
+  type MetadataMap = Map[String, ObjectMetadata]
+  type Bucket = String
+
   /**
     * The task "s3-upload" uploads a set of files to a specificed S3 bucket.
     * Depends on:
@@ -21,7 +28,7 @@ trait S3Keys {
     *
     * Returns: the sequence of uploaded keys (pathnames).
     */
-    val upload=TaskKey[Seq[String]]("s3-upload","Uploads files to an S3 bucket.")
+    val s3Upload=TaskKey[Seq[String]]("s3-upload","Uploads files to an S3 bucket.")
 
   /**
     * The task "s3-download" downloads a set of files from a specificed S3 bucket.
@@ -43,7 +50,7 @@ trait S3Keys {
     *
     * Returns: the sequence of downloaded files.
     */
-    val download=TaskKey[Seq[File]]("s3-download","Downloads files from an S3 bucket.")
+    val s3Download=TaskKey[Seq[File]]("s3-download","Downloads files from an S3 bucket.")
 
   /**
     * The task "s3-delete" deletes a set of files from a specificed S3 bucket.
@@ -65,7 +72,7 @@ trait S3Keys {
     *
     * Returns: the sequence of deleted keys (pathnames).
     */
-    val delete=TaskKey[Seq[String]]("s3-delete","Delete files from an S3 bucket.")
+    val s3Delete=TaskKey[Seq[String]]("s3-delete","Delete files from an S3 bucket.")
 
   /**
     * The task "s3-generate-links" creates a link for set of files in a S3 bucket.
@@ -89,7 +96,7 @@ trait S3Keys {
     *
     * Returns: the sequence of generated URLs.
     */
-    val generateLinks=TaskKey[Seq[URL]]("s3-generate-links","Creates links to a set of files in an S3 bucket.")
+    val s3GenerateLinks=TaskKey[Seq[URL]]("s3-generate-links","Creates links to a set of files in an S3 bucket.")
 
   /**
     * A string representing the S3 bucket name, in one of these forms:
@@ -97,22 +104,22 @@ trait S3Keys {
     *   1. "mybucket.s3-myregion.amazonaws.com", where "myregion" is the region name, or
     *   1. "mybucket", for instance in case the name is a fully qualified hostname used in a CNAME
     */
-    val host=SettingKey[String]("s3-host","Host used by the S3 operation, either \"mybucket.s3.amazonaws.com\" or \"mybucket\".")
+    val s3Host=SettingKey[String]("s3-host","Host used by the S3 operation, either \"mybucket.s3.amazonaws.com\" or \"mybucket\".")
 
   /**
     * A list of S3 keys (pathnames) representing objects in a bucket on which a certain operation should be performed.
     */
-    val keys=TaskKey[Seq[String]]("s3-keys","List of S3 keys (pathnames) on which to perform a certain operation.")
+    val s3Keys=TaskKey[Seq[String]]("s3-keys","List of S3 keys (pathnames) on which to perform a certain operation.")
 
   /**
     * If you set "progress" to true, a progress indicator will be displayed while the individual files are uploaded or downloaded.
     * Only recommended for interactive use or testing; the default value is false.
     */
-    val progress=SettingKey[Boolean]("s3-progress","Set to true to get a progress indicator during S3 uploads/downloads (default false).")
+    val s3Progress=SettingKey[Boolean]("s3-progress","Set to true to get a progress indicator during S3 uploads/downloads (default false).")
 
-    val metadata=SettingKey[MetadataMap]("s3-metadata","Mapping from S3 keys (pathnames) to the corresponding metadata")
+    val s3Metadata=SettingKey[MetadataMap]("s3-metadata","Mapping from S3 keys (pathnames) to the corresponding metadata")
 
-    val expirationDate=SettingKey[java.util.Date]("s3-expiration-date", "Expiration date for the generated link")
+    val s3ExpirationDate=SettingKey[java.util.Date]("s3-expiration-date", "Expiration date for the generated link")
 }
 
 object S3Keys extends S3Keys

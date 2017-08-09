@@ -1,16 +1,19 @@
 package com.typesafe.sbt
 
-import com.amazonaws.event.{ProgressEventType, ProgressEvent, SyncProgressListener}
-import com.amazonaws.services.s3.model.{GeneratePresignedUrlRequest, GetObjectRequest, PutObjectRequest, ObjectMetadata}
-import sbt.{File => _, _}
 import java.io.File
 import java.util.Date
-import Keys._
-import com.amazonaws._
-import auth._, services.s3._
-import org.apache.commons.lang.StringUtils.removeEndIgnoreCase
 import java.util.regex.Pattern
 import java.util.regex.Pattern.CASE_INSENSITIVE
+
+import com.amazonaws.event.{ProgressEventType, ProgressEvent, SyncProgressListener}
+import com.amazonaws.services.s3.model.{GeneratePresignedUrlRequest, GetObjectRequest, PutObjectRequest}
+import com.amazonaws._
+import auth._, services.s3._
+
+import sbt.{File => _, _}
+import Keys._
+
+import org.apache.commons.lang.StringUtils.removeEndIgnoreCase
 
 /**
   * S3Plugin is a simple sbt plugin that can manipulate objects on Amazon S3.
@@ -48,7 +51,7 @@ import java.util.regex.Pattern.CASE_INSENSITIVE
   * You can also see progress while uploading:
   * {{{
   * $ sbt
-  * > set S3.progress in S3.upload := true
+  * > set s3Progress in s3Upload := true
   * > s3-upload
   * [==================================================]   100%   zipa.txt
   * [=====================================>            ]    74%   zipb.jar
@@ -58,14 +61,14 @@ import java.util.regex.Pattern.CASE_INSENSITIVE
   */
 object S3Plugin extends AutoPlugin {
 
+  @deprecated("Use S3Keys instead.", "0.10")
+  final val S3 = S3Keys
+
   object autoImport extends S3Keys {
-    private[S3Plugin] val dummy=SettingKey[Unit]("dummy-internal","Dummy setting")
+    private[S3Plugin] val dummy = SettingKey[Unit]("dummy-internal","Dummy setting")
   }
 
   import autoImport._
-
-  type MetadataMap = Map[String, ObjectMetadata]
-  type Bucket = String
 
   private def makeProxyableClientConfiguration(): ClientConfiguration = {
     def doWith(prop: String)(f: String => Unit): Unit = {
@@ -103,19 +106,19 @@ object S3Plugin extends AutoPlugin {
   private def s3InitTask[Item,Extra,Return](thisTask:TaskKey[Seq[Return]], itemsKey:TaskKey[Seq[Item]],
                                             extra:SettingKey[Extra], // may be unused (a dummy value)
                                             op:(AmazonS3Client,Bucket,Item,Extra,Boolean) => Return,
-                                            msg:(Bucket,Item) => String, lastMsg:(Bucket,Seq[Item]) => String) = {
-    val creds = (credentials in thisTask).value
-    val items = (itemsKey in thisTask).value
-    val hst   = (host in thisTask).value
-    val ext   = (extra in thisTask).value
-    val prog  = (progress in thisTask).value
-    val log   = streams.value.log
+                                            msg:(Bucket,Item) => String, lastMsg:(Bucket,Seq[Item]) => String) = Def.task {
+    val creds    = (credentials in thisTask).value
+    val items    = (itemsKey in thisTask).value
+    val host     = (s3Host in thisTask).value
+    val ext      = (extra in thisTask).value
+    val progress = (s3Progress in thisTask).value
+    val log      = streams.value.log
 
-    val client = getClient(creds, hst)
-    val bucket = getBucket(hst)
+    val client = getClient(creds, host)
+    val bucket = getBucket(host)
     val ret = items map { item =>
       log.debug(msg(bucket,item))
-      op(client,bucket,item,ext,prog)
+      op(client, bucket, item, ext, progress)
     }
 
     log.info(lastMsg(bucket,items))
@@ -172,7 +175,7 @@ object S3Plugin extends AutoPlugin {
    */
   val s3Settings = Seq(
 
-    upload := s3InitTask[(File,String),MetadataMap,String](upload, mappings, metadata,
+    s3Upload := s3InitTask[(File,String),MetadataMap,String](s3Upload, mappings, s3Metadata,
                            { case (client,bucket,(file,key),metadata,progress) =>
                                val request=new PutObjectRequest(bucket,key,file)
                                if (progress) addProgressListener(request,file.length(),key)
@@ -183,7 +186,7 @@ object S3Plugin extends AutoPlugin {
                            {      (bucket,mapps) =>       prettyLastMsg("Uploaded", mapps.map(_._2), "to", bucket) }
                          ).value,
 
-    download := s3InitTask[(File,String),Unit,File](download, mappings, dummy,
+    s3Download := s3InitTask[(File,String),Unit,File](s3Download, mappings, dummy,
                            { case (client,bucket,(file,key),_,progress) =>
                                val request=new GetObjectRequest(bucket,key)
                                val objectMetadata=client.getObjectMetadata(bucket,key)
@@ -195,13 +198,13 @@ object S3Plugin extends AutoPlugin {
                            {      (bucket,mapps) =>       prettyLastMsg("Downloaded", mapps.map(_._2), "from", bucket) }
                          ).value,
 
-    delete := s3InitTask[String,Unit,String](delete, keys, dummy,
+    s3Delete := s3InitTask[String,Unit,String](s3Delete, s3Keys, dummy,
                            { (client,bucket,key,_,_) => client.deleteObject(bucket,key); key },
                            { (bucket,key) =>          "Deleting "+key+" from "+bucket },
                            { (bucket,keys1) =>        prettyLastMsg("Deleted", keys1, "from", bucket) }
                          ).value,
 
-    generateLinks := s3InitTask[String,Date,URL](generateLinks, keys, expirationDate,
+    s3GenerateLinks := s3InitTask[String,Date,URL](s3GenerateLinks, s3Keys, s3ExpirationDate,
                            { (client,bucket,key,date,_) =>
                                val request = new GeneratePresignedUrlRequest(bucket, key)
                                request.setMethod(HttpMethod.GET)
@@ -214,13 +217,13 @@ object S3Plugin extends AutoPlugin {
                            { (bucket,keys1) =>        prettyLastMsg("Generated link", keys1, "from", bucket) }
                          ).value,
 
-    host := "",
-    keys := Seq(),
-    metadata := Map(),
-    mappings in download := Seq(),
-    mappings in upload := Seq(),
-    progress := false,
-    expirationDate := new java.util.Date(),
+    s3Host := "",
+    s3Keys := Seq(),
+    s3Metadata := Map(),
+    mappings in s3Download := Seq(),
+    mappings in s3Upload := Seq(),
+    s3Progress := false,
+    s3ExpirationDate := new java.util.Date(),
     dummy := ()
   )
 }
