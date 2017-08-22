@@ -1,16 +1,19 @@
 package com.typesafe.sbt
 
-import com.amazonaws.event.{ProgressEventType, ProgressEvent, SyncProgressListener}
-import com.amazonaws.services.s3.model.{GeneratePresignedUrlRequest, GetObjectRequest, PutObjectRequest, ObjectMetadata}
-import sbt.{File => _, _}
 import java.io.File
 import java.util.Date
-import Keys._
-import com.amazonaws._
-import auth._, services.s3._
-import org.apache.commons.lang.StringUtils.removeEndIgnoreCase
 import java.util.regex.Pattern
 import java.util.regex.Pattern.CASE_INSENSITIVE
+
+import com.amazonaws.event.{ProgressEventType, ProgressEvent, SyncProgressListener}
+import com.amazonaws.services.s3.model.{GeneratePresignedUrlRequest, GetObjectRequest, PutObjectRequest}
+import com.amazonaws._
+import auth._, services.s3._
+
+import sbt.{File => _, _}
+import Keys._
+
+import org.apache.commons.lang.StringUtils.removeEndIgnoreCase
 
 /**
   * S3Plugin is a simple sbt plugin that can manipulate objects on Amazon S3.
@@ -19,17 +22,16 @@ import java.util.regex.Pattern.CASE_INSENSITIVE
   * Here is a complete example:
   *
   *  - project/plugin.sbt:
-  * {{{addSbtPlugin("com.typesafe.sbt" % "sbt-s3" % "0.8")}}}
+  * {{{addSbtPlugin("com.typesafe.sbt" % "sbt-s3" % "0.10")}}}
   *
   *  - build.sbt:
   * {{{
-  * import S3._
   *
-  * s3Settings
+  * enablePlugins(S3Plugin)
   *
-  * mappings in upload := Seq((new java.io.File("a"),"zipa.txt"),(new java.io.File("b"),"pongo/zipb.jar"))
+  * mappings in s3Upload := Seq((new java.io.File("a"),"zipa.txt"),(new java.io.File("b"),"pongo/zipb.jar"))
   *
-  * host in upload := "s3sbt-test.s3.amazonaws.com"
+  * s3Host in s3Upload := "s3sbt-test.s3.amazonaws.com"
   *
   * credentials += Credentials(Path.userHome / ".s3credentials")
   * }}}
@@ -49,7 +51,7 @@ import java.util.regex.Pattern.CASE_INSENSITIVE
   * You can also see progress while uploading:
   * {{{
   * $ sbt
-  * > set S3.progress in S3.upload := true
+  * > set s3Progress in s3Upload := true
   * > s3-upload
   * [==================================================]   100%   zipa.txt
   * [=====================================>            ]    74%   zipb.jar
@@ -57,133 +59,16 @@ import java.util.regex.Pattern.CASE_INSENSITIVE
   *
   *  Please select the nested `S3` object link, below, for additional information on the available tasks.
   */
-object S3Plugin extends sbt.Plugin {
+object S3Plugin extends AutoPlugin {
 
-  type MetadataMap = Map[String, ObjectMetadata]
-  /**
-    * This nested object defines the sbt keys made available by the S3Plugin: read here for tasks info.
-    */
-  object S3 {
+  @deprecated("Use S3Keys instead.", "0.10")
+  final val S3 = S3Keys
 
-  /**
-    * The task "s3-upload" uploads a set of files to a specificed S3 bucket.
-    * Depends on:
-    *  - ''credentials in S3.upload'': security credentials used to access the S3 bucket, as follows:
-    *   - ''realm'': "Amazon S3"
-    *   - ''host'': the string specified by S3.host in S3.upload, see below
-    *   - ''user'': Access Key ID
-    *   - ''password'': Secret Access Key
-    *   If running under EC2, the credentials will automatically be provided via IAM.
-    *  - ''mappings in S3.upload'': the list of local files and S3 keys (pathnames), for example:
-    *  `Seq((File("f1.txt"),"aaa/bbb/file1.txt"), ...)`
-    *  - ''S3.host in S3.upload'': the bucket name, in one of these forms:
-    *   1. "mybucket.s3.amazonaws.com", where "mybucket" is the bucket name, or
-    *   1. "mybucket.s3-myregion.amazonaws.com", where "myregion" is the region name, or
-    *   1. "mybucket", for instance in case the name is a fully qualified hostname used in a CNAME
-    *
-    * If you set logLevel to "Level.Debug", the list of files will be printed while uploading.
-    *
-    * Returns: the sequence of uploaded keys (pathnames).
-    */
-    val upload=TaskKey[Seq[String]]("s3-upload","Uploads files to an S3 bucket.")
-
-  /**
-    * The task "s3-download" downloads a set of files from a specificed S3 bucket.
-    * Depends on:
-    *  - ''credentials in S3.download'': security credentials used to access the S3 bucket, as follows:
-    *   - ''realm'': "Amazon S3"
-    *   - ''host'': the string specified by S3.host in S3.download, see below
-    *   - ''user'': Access Key ID
-    *   - ''password'': Secret Access Key
-    *   If running under EC2, the credentials will automatically be provided via IAM.
-    *  - ''mappings in S3.download'': the list of local files and S3 keys (pathnames), for example:
-    *  `Seq((File("f1.txt"),"aaa/bbb/file1.txt"), ...)`
-    *  - ''S3.host in S3.download'': the bucket name, in one of these forms:
-    *   1. "mybucket.s3.amazonaws.com", where "mybucket" is the bucket name, or
-    *   1. "mybucket.s3-myregion.amazonaws.com", where "myregion" is the region name, or
-    *   1. "mybucket", for instance in case the name is a fully qualified hostname used in a CNAME
-    *
-    * If you set logLevel to "Level.Debug", the list of files will be printed while downloading.
-    *
-    * Returns: the sequence of downloaded files.
-    */
-    val download=TaskKey[Seq[File]]("s3-download","Downloads files from an S3 bucket.")
-
-  /**
-    * The task "s3-delete" deletes a set of files from a specificed S3 bucket.
-    * Depends on:
-    *  - ''credentials in S3.delete'': security credentials used to access the S3 bucket, as follows:
-    *   - ''realm'': "Amazon S3"
-    *   - ''host'': the string specified by S3.host in S3.delete, see below
-    *   - ''user'': Access Key ID
-    *   - ''password'': Secret Access Key
-    *   If running under EC2, the credentials will automatically be provided via IAM.
-    *  - ''S3.keys in S3.delete'': the list of S3 keys (pathnames), for example:
-    *  `Seq("aaa/bbb/file1.txt", ...)`
-    *  - ''S3.host in S3.delete'': the bucket name, in one of these forms:
-    *   1. "mybucket.s3.amazonaws.com", where "mybucket" is the bucket name, or
-    *   1. "mybucket.s3-myregion.amazonaws.com", where "myregion" is the region name, or
-    *   1. "mybucket", for instance in case the name is a fully qualified hostname used in a CNAME
-    *
-    * If you set logLevel to "Level.Debug", the list of keys will be printed while the S3 objects are being deleted.
-    *
-    * Returns: the sequence of deleted keys (pathnames).
-    */
-    val delete=TaskKey[Seq[String]]("s3-delete","Delete files from an S3 bucket.")
-
-  /**
-    * The task "s3-generate-links" creates a link for set of files in a S3 bucket.
-    * Depends on:
-    *  - ''credentials in S3.generateLinks'': security credentials used to access the S3 bucket, as follows:
-    *   - ''realm'': "Amazon S3"
-    *   - ''host'': the string specified by S3.host in S3.upload, see below
-    *   - ''user'': Access Key ID
-    *   - ''password'': Secret Access Key
-    *   If running under EC2, the credentials will automatically be provided via IAM.
-    *  - ''keys in S3.upload'': the list of remote files, for example:
-    *  `Seq("aaa/bbb/file1.txt", ...)`
-    *  - ''expirationDate in S3.generateLinks'': the expiration date at which point the
-    *   pre-signed URL will no longer be accepted by Amazon S3. It must be specified.
-    *  - ''S3.host in S3.generateLinks'': the bucket name, in one of these forms:
-    *   1. "mybucket.s3.amazonaws.com", where "mybucket" is the bucket name, or
-    *   1. "mybucket.s3-myregion.amazonaws.com", where "myregion" is the region name, or
-    *   1. "mybucket", for instance in case the name is a fully qualified hostname used in a CNAME
-    *
-    * If you set logLevel to "Level.Debug", the list of files will be printed while uploading.
-    *
-    * Returns: the sequence of generated URLs.
-    */
-    val generateLinks=TaskKey[Seq[URL]]("s3-generate-links","Creates links to a set of files in an S3 bucket.")
-
-  /**
-    * A string representing the S3 bucket name, in one of these forms:
-    *   1. "mybucket.s3.amazonaws.com", where "mybucket" is the bucket name, or
-    *   1. "mybucket.s3-myregion.amazonaws.com", where "myregion" is the region name, or
-    *   1. "mybucket", for instance in case the name is a fully qualified hostname used in a CNAME
-    */
-    val host=SettingKey[String]("s3-host","Host used by the S3 operation, either \"mybucket.s3.amazonaws.com\" or \"mybucket\".")
-
-  /**
-    * A list of S3 keys (pathnames) representing objects in a bucket on which a certain operation should be performed.
-    */
-    val keys=TaskKey[Seq[String]]("s3-keys","List of S3 keys (pathnames) on which to perform a certain operation.")
-
-  /**
-    * If you set "progress" to true, a progress indicator will be displayed while the individual files are uploaded or downloaded.
-    * Only recommended for interactive use or testing; the default value is false.
-    */
-    val progress=SettingKey[Boolean]("s3-progress","Set to true to get a progress indicator during S3 uploads/downloads (default false).")
-
-    val metadata=SettingKey[MetadataMap]("s3-metadata","Mapping from S3 keys (pathnames) to the corresponding metadata")
-
-    val expirationDate=SettingKey[java.util.Date]("s3-expiration-date", "Expiration date for the generated link")
-
-    private[S3Plugin] val dummy=SettingKey[Unit]("dummy-internal","Dummy setting")
+  object autoImport extends S3Keys {
+    private[S3Plugin] val dummy = SettingKey[Unit]("dummy-internal","Dummy setting")
   }
 
-  import S3._
-
-  type Bucket=String
+  import autoImport._
 
   private def makeProxyableClientConfiguration(): ClientConfiguration = {
     def doWith(prop: String)(f: String => Unit): Unit = {
@@ -220,21 +105,25 @@ object S3Plugin extends sbt.Plugin {
 
   private def s3InitTask[Item,Extra,Return](thisTask:TaskKey[Seq[Return]], itemsKey:TaskKey[Seq[Item]],
                                             extra:SettingKey[Extra], // may be unused (a dummy value)
-                                            op:(AmazonS3Client,Bucket,Item,Extra,Boolean)=>Return,
-                                            msg:(Bucket,Item)=>String, lastMsg:(Bucket,Seq[Item])=>String )  =
+                                            op:(AmazonS3Client,Bucket,Item,Extra,Boolean) => Return,
+                                            msg:(Bucket,Item) => String, lastMsg:(Bucket,Seq[Item]) => String) = Def.task {
+    val creds    = (credentials in thisTask).value
+    val items    = (itemsKey in thisTask).value
+    val host     = (s3Host in thisTask).value
+    val ext      = (extra in thisTask).value
+    val progress = (s3Progress in thisTask).value
+    val log      = streams.value.log
 
-    (credentials in thisTask, itemsKey in thisTask, host in thisTask, extra in thisTask, progress in thisTask, streams) map {
-      (creds,items,host,extra,progress,streams) =>
-        val client = getClient(creds, host)
-        val bucket = getBucket(host)
-        val ret = items map { item =>
-          streams.log.debug(msg(bucket,item))
-          op(client,bucket,item,extra,progress)
-        }
-        streams.log.info(lastMsg(bucket,items))
-        ret
+    val client = getClient(creds, host)
+    val bucket = getBucket(host)
+    val ret = items map { item =>
+      log.debug(msg(bucket,item))
+      op(client, bucket, item, ext, progress)
     }
 
+    log.info(lastMsg(bucket,items))
+    ret
+  }
 
   private def progressBar(percent:Int) = {
     val b="=================================================="
@@ -286,7 +175,7 @@ object S3Plugin extends sbt.Plugin {
    */
   val s3Settings = Seq(
 
-    upload <<= s3InitTask[(File,String),MetadataMap,String](upload, mappings, metadata,
+    s3Upload := s3InitTask[(File,String),MetadataMap,String](s3Upload, mappings, s3Metadata,
                            { case (client,bucket,(file,key),metadata,progress) =>
                                val request=new PutObjectRequest(bucket,key,file)
                                if (progress) addProgressListener(request,file.length(),key)
@@ -295,9 +184,9 @@ object S3Plugin extends sbt.Plugin {
                            },
                            { case (bucket,(file,key)) =>  "Uploading "+file.getAbsolutePath()+" as "+key+" into "+bucket },
                            {      (bucket,mapps) =>       prettyLastMsg("Uploaded", mapps.map(_._2), "to", bucket) }
-                         ),
+                         ).value,
 
-    download <<= s3InitTask[(File,String),Unit,File](download, mappings, dummy,
+    s3Download := s3InitTask[(File,String),Unit,File](s3Download, mappings, dummy,
                            { case (client,bucket,(file,key),_,progress) =>
                                val request=new GetObjectRequest(bucket,key)
                                val objectMetadata=client.getObjectMetadata(bucket,key)
@@ -307,15 +196,15 @@ object S3Plugin extends sbt.Plugin {
                            },
                            { case (bucket,(file,key)) =>  "Downloading "+file.getAbsolutePath()+" as "+key+" from "+bucket },
                            {      (bucket,mapps) =>       prettyLastMsg("Downloaded", mapps.map(_._2), "from", bucket) }
-                         ),
+                         ).value,
 
-    delete <<= s3InitTask[String,Unit,String](delete, keys, dummy,
+    s3Delete := s3InitTask[String,Unit,String](s3Delete, s3Keys, dummy,
                            { (client,bucket,key,_,_) => client.deleteObject(bucket,key); key },
                            { (bucket,key) =>          "Deleting "+key+" from "+bucket },
                            { (bucket,keys1) =>        prettyLastMsg("Deleted", keys1, "from", bucket) }
-                         ),
+                         ).value,
 
-    generateLinks <<= s3InitTask[String,Date,URL](generateLinks, keys, expirationDate,
+    s3GenerateLinks := s3InitTask[String,Date,URL](s3GenerateLinks, s3Keys, s3ExpirationDate,
                            { (client,bucket,key,date,_) =>
                                val request = new GeneratePresignedUrlRequest(bucket, key)
                                request.setMethod(HttpMethod.GET)
@@ -326,15 +215,15 @@ object S3Plugin extends sbt.Plugin {
                            },
                            { (bucket,key) =>          s"Creating link for $key in $bucket" },
                            { (bucket,keys1) =>        prettyLastMsg("Generated link", keys1, "from", bucket) }
-                         ),
+                         ).value,
 
-    host := "",
-    keys := Seq(),
-    metadata := Map(),
-    mappings in download := Seq(),
-    mappings in upload := Seq(),
-    progress := false,
-    expirationDate := new java.util.Date(),
+    s3Host := "",
+    s3Keys := Seq(),
+    s3Metadata := Map(),
+    mappings in s3Download := Seq(),
+    mappings in s3Upload := Seq(),
+    s3Progress := false,
+    s3ExpirationDate := new java.util.Date(),
     dummy := ()
   )
 }

@@ -7,15 +7,15 @@
 ## Usage
 
 * add to your project/plugin.sbt the line:
-   `addSbtPlugin("com.typesafe.sbt" % "sbt-s3" % "0.9")`
+   `addSbtPlugin("com.typesafe.sbt" % "sbt-s3" % "0.10")`
 * then add to your build.sbt the line:
-   `s3Settings`
- 
-You will then be able to use the tasks s3-upload, s3-download, s3-delete, and s3-generate-links, defined
-in the nested object `com.typesafe.sbt.S3Plugin.S3` as upload, download, delete, and generateLinks respectively.
+   `enablePlugins(S3Plugin)`
+
+You will then be able to use the tasks `s3-upload`, `s3-download`, `s3-delete`, and `s3-generate-links`, defined
+in the object `com.typesafe.sbt.S3Keys` as `s3Upload`, `s3Download`, `s3Delete`, and `s3GenerateLinks` respectively.
 All these operations will use HTTPS as a transport protocol.
- 
-Please check the Scaladoc API of the `S3Plugin` object, and of its nested `S3` object,
+
+Please check the Scaladoc API of the `S3Plugin` object, and the `S3Keys` object,
 to get additional documentation on the available sbt tasks, and their parameters.
 
 ## Example 1
@@ -23,18 +23,16 @@ to get additional documentation on the available sbt tasks, and their parameters
 Here is a complete example:
 
 project/plugin.sbt:
-    
-    addSbtPlugin("com.typesafe.sbt" % "sbt-s3" % "0.9")
+
+    addSbtPlugin("com.typesafe.sbt" % "sbt-s3" % "0.10")
 
 build.sbt:
 
-    import S3._
+    enablePlugins(S3Plugin)
 
-    s3Settings
+    mappings in s3Upload := Seq((new java.io.File("a"),"zipa.txt"),(new java.io.File("b"),"pongo/zipb.jar"))
 
-    mappings in upload := Seq((new java.io.File("a"),"zipa.txt"),(new java.io.File("b"),"pongo/zipb.jar"))
-
-    host in upload := "s3sbt-test.s3.amazonaws.com"
+    s3Host in s3Upload := "s3sbt-test.s3.amazonaws.com"
 
     credentials += Credentials(Path.userHome / ".s3credentials")
 
@@ -48,11 +46,11 @@ build.sbt:
 Just create two sample files called "a" and "b" in the same directory that contains build.sbt, then try:
 
     $ sbt s3-upload
-    
+
 You can also see progress while uploading:
 
     $ sbt
-    > set S3.progress in S3.upload := true
+    > set s3Progress in s3Upload := true
     > s3-upload
     [==================================================]   100%   zipa.txt
     [=====================================>            ]    74%   zipb.jar
@@ -60,7 +58,7 @@ You can also see progress while uploading:
 Unless explicitly provided as described above, credentials will be obtained via (in order):
 
 1. `AWS_ACCESS_KEY_ID` and `AWS_SECRET_KEY` environment variables
-2. `aws.accessKeyId` and `aws.secretKey` Java system properties 
+2. `aws.accessKeyId` and `aws.secretKey` Java system properties
 3. Default aws cli credentials file (`~/.aws/credentials`)
 4. IAM instance profile if running under EC2.
 
@@ -73,11 +71,9 @@ build.sbt is all that is needed.
 
 build.sbt:
 
-    import S3._
+    enablePlugins(S3Plugin)
 
-    s3Settings
-
-    mappings in upload := Seq((target.value / "web" / "stage" / "css" / "style-group2.css.gz" ,"css/style-group2.css"))
+    mappings in s3Upload := Seq((target.value / "web" / "stage" / "css" / "style-group2.css.gz" ,"css/style-group2.css"))
 
     def md = {
       import com.amazonaws.services.s3.model.ObjectMetadata
@@ -87,13 +83,11 @@ build.sbt:
       omd
     }
 
-    metadata in upload := Map("css/style-group2.css" -> md)
+    s3Metadata in s3Upload := Map("css/style-group2.css" -> md)
 
-    host in upload := "s3sbt-test.s3.amazonaws.com"
+    s3Host in s3Upload := "s3sbt-test.s3.amazonaws.com"
 
     credentials += Credentials(Path.userHome / ".s3credentials")
-
-    metadata in upload
 
 
 ## License
