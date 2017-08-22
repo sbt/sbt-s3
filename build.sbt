@@ -6,9 +6,9 @@ version := "0.10-SNAPSHOT"
 
 isSnapshot := true
 
-organization := "com.github.sbt"
+organization := "cf.janga"
 
-organizationName := "Typesafe"
+organizationName := "Janga"
 
 sbtPlugin := true
 
