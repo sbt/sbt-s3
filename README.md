@@ -6,8 +6,9 @@
 
 ## Usage
 
-* add to your project/plugin.sbt the line:
-   `addSbtPlugin("com.typesafe.sbt" % "sbt-s3" % "0.10")`
+* add to your project/plugin.sbt:
+   `resolvers += Resolver.url("sbts3 ivy resolver", url("http://dl.bintray.com/emersonloureiro/sbt-plugins"))(Resolver.ivyStylePatterns)`
+   `addSbtPlugin("cf.janga" % "sbts3" % "0.10")`
 * then add to your build.sbt the line:
    `enablePlugins(S3Plugin)`
 
@@ -24,7 +25,9 @@ Here is a complete example:
 
 project/plugin.sbt:
 
-    addSbtPlugin("com.typesafe.sbt" % "sbt-s3" % "0.10")
+    resolvers += Resolver.url("sbts3 ivy resolver", url("http://dl.bintray.com/emersonloureiro/sbt-plugins"))(Resolver.ivyStylePatterns)
+
+    addSbtPlugin("cf.janga" % "sbts3" % "0.10")
 
 build.sbt:
 
@@ -57,7 +60,7 @@ You can also see progress while uploading:
 
 Unless explicitly provided as described above, credentials will be obtained via (in order):
 
-1. `AWS_ACCESS_KEY_ID` and `AWS_SECRET_KEY` environment variables
+1. `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables
 2. `aws.accessKeyId` and `aws.secretKey` Java system properties
 3. Default aws cli credentials file (`~/.aws/credentials`)
 4. IAM instance profile if running under EC2.
