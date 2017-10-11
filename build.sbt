@@ -24,7 +24,7 @@ scalacOptions in (Compile, doc) ++=
 
 publishMavenStyle := false
 
-crossSbtVersions := Seq("0.13.16", "1.0.0-RC3")
+crossSbtVersions := Seq("0.13.16", "1.0.2")
 
 bintrayRepository := "sbt-plugins"
 
