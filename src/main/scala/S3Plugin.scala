@@ -3,17 +3,14 @@ package com.typesafe.sbt
 import java.io.File
 import java.util.Date
 import java.util.regex.Pattern
-import java.util.regex.Pattern.CASE_INSENSITIVE
 
-import com.amazonaws.event.{ProgressEventType, ProgressEvent, SyncProgressListener}
+import com.amazonaws.event.{ProgressEvent, ProgressEventType, SyncProgressListener}
 import com.amazonaws.services.s3.model.{GeneratePresignedUrlRequest, GetObjectRequest, PutObjectRequest}
 import com.amazonaws._
-import auth._, services.s3._
-
-import sbt.{File => _, _}
+import auth._
+import services.s3._
+import sbt._
 import Keys._
-
-import org.apache.commons.lang.StringUtils.removeEndIgnoreCase
 
 /**
   * S3Plugin is a simple sbt plugin that can manipulate objects on Amazon S3.
@@ -173,7 +170,7 @@ object S3Plugin extends AutoPlugin {
   /*
    * Include the line {{{s3Settings}}} in your build.sbt file, in order to import the tasks defined by this S3 plugin.
    */
-  val s3Settings = Seq(
+  private val s3Settings = Seq(
 
     s3Upload := s3InitTask[(File,String),MetadataMap,String](s3Upload, mappings, s3Metadata,
                            { case (client,bucket,(file,key),metadata,progress) =>
@@ -226,4 +223,6 @@ object S3Plugin extends AutoPlugin {
     s3ExpirationDate := new java.util.Date(),
     dummy := ()
   )
+
+  override def projectSettings: Seq[Def.Setting[_]] = super.projectSettings ++ s3Settings
 }
