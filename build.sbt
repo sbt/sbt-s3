@@ -2,7 +2,7 @@ name := "sbts3"
 
 description := "S3 Plugin for sbt"
 
-version := "0.11-SNAPSHOT"
+version := "0.10.3-SNAPSHOT"
 
 isSnapshot := true
 
