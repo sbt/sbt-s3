@@ -7,7 +7,7 @@
 ## Usage
 
 * add to your project/plugin.sbt:
-   `resolvers += Resolver.url("sbts3 ivy resolver", url("http://dl.bintray.com/emersonloureiro/sbt-plugins"))(Resolver.ivyStylePatterns)`
+   `resolvers += Resolver.url("sbts3 ivy resolver", url("https://dl.bintray.com/emersonloureiro/sbt-plugins"))(Resolver.ivyStylePatterns)`
    `addSbtPlugin("cf.janga" % "sbts3" % "0.10.2")`
 * then add to your build.sbt the line:
    `enablePlugins(S3Plugin)`
@@ -25,7 +25,7 @@ Here is a complete example:
 
 project/plugin.sbt:
 
-    resolvers += Resolver.url("sbts3 ivy resolver", url("http://dl.bintray.com/emersonloureiro/sbt-plugins"))(Resolver.ivyStylePatterns)
+    resolvers += Resolver.url("sbts3 ivy resolver", url("https://dl.bintray.com/emersonloureiro/sbt-plugins"))(Resolver.ivyStylePatterns)
 
     addSbtPlugin("cf.janga" % "sbts3" % "0.10.2")
 
