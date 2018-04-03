@@ -8,7 +8,7 @@
 
 * add to your project/plugin.sbt:
    `resolvers += Resolver.url("sbts3 ivy resolver", url("http://dl.bintray.com/emersonloureiro/sbt-plugins"))(Resolver.ivyStylePatterns)`
-   `addSbtPlugin("cf.janga" % "sbts3" % "0.10.2")`
+   `addSbtPlugin("cf.janga" % "sbts3" % "0.10.3")`
 * then add to your build.sbt the line:
    `enablePlugins(S3Plugin)`
 
@@ -27,7 +27,7 @@ project/plugin.sbt:
 
     resolvers += Resolver.url("sbts3 ivy resolver", url("http://dl.bintray.com/emersonloureiro/sbt-plugins"))(Resolver.ivyStylePatterns)
 
-    addSbtPlugin("cf.janga" % "sbts3" % "0.10.2")
+    addSbtPlugin("cf.janga" % "sbts3" % "0.10.3")
 
 build.sbt:
 
