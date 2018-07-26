@@ -28,6 +28,6 @@ crossSbtVersions := Seq("0.13.17", "1.1.6")
 
 bintrayRepository := "sbt-plugins"
 
-licenses += ("BSD", url("http://directory.fsf.org/wiki/License:BSD_4Clause"))
+licenses += ("Apache-2.0", url("https://www.apache.org/licenses/LICENSE-2.0"))
 
 bintrayOrganization := None
