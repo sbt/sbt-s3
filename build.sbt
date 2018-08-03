@@ -10,9 +10,10 @@ organization := "cf.janga"
 
 organizationName := "Janga"
 
-sbtPlugin := true
-
 startYear := Some(2013)
+
+lazy val root = (project in file("."))
+  .enablePlugins(SbtPlugin)
 
 libraryDependencies ++= Seq("com.amazonaws" % "aws-java-sdk-s3" % "1.11.340",
                             "commons-lang" % "commons-lang" % "2.6")
