@@ -221,7 +221,7 @@ object S3Plugin extends AutoPlugin {
     mappings in s3Upload := Seq(),
     s3Progress := false,
     s3ExpirationDate := new java.util.Date(),
-    dummy := ()
+    dummy := (())
   )
 
   override def projectSettings: Seq[Def.Setting[_]] = super.projectSettings ++ s3Settings
