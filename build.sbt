@@ -15,7 +15,7 @@ startYear := Some(2013)
 lazy val root = (project in file("."))
   .enablePlugins(SbtPlugin)
 
-libraryDependencies ++= Seq("com.amazonaws" % "aws-java-sdk-s3" % "1.11.409",
+libraryDependencies ++= Seq("com.amazonaws" % "aws-java-sdk-s3" % "1.11.427",
                             "commons-lang" % "commons-lang" % "2.6")
 
 scalacOptions in (Compile, doc) ++=
@@ -25,7 +25,7 @@ scalacOptions in (Compile, doc) ++=
 
 publishMavenStyle := false
 
-crossSbtVersions := Seq("0.13.17", "1.1.6")
+crossSbtVersions := Seq("0.13.17", "1.2.4")
 
 bintrayRepository := "sbt-plugins"
 

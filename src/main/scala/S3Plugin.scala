@@ -93,7 +93,11 @@ object S3Plugin extends AutoPlugin {
             sys.error("Could not find S3 credentials for the host: "+host+", and no IAM credentials available")
         }
     }
-    new AmazonS3Client(credentials, makeProxyableClientConfiguration())
+    AmazonS3ClientBuilder
+      .standard()
+      .withClientConfiguration(makeProxyableClientConfiguration())
+      .withCredentials(new AWSStaticCredentialsProvider(credentials))
+      .build()
   }
 
   // if present, remove the suffix .s3*.amazonaws.com
@@ -102,7 +106,7 @@ object S3Plugin extends AutoPlugin {
 
   private def s3InitTask[Item,Extra,Return](thisTask:TaskKey[Seq[Return]], itemsKey:TaskKey[Seq[Item]],
                                             extra:SettingKey[Extra], // may be unused (a dummy value)
-                                            op:(AmazonS3Client,Bucket,Item,Extra,Boolean) => Return,
+                                            op:(AmazonS3,Bucket,Item,Extra,Boolean) => Return,
                                             msg:(Bucket,Item) => String, lastMsg:(Bucket,Seq[Item]) => String) = Def.task {
     val creds    = (credentials in thisTask).value
     val items    = (itemsKey in thisTask).value
@@ -221,7 +225,7 @@ object S3Plugin extends AutoPlugin {
     mappings in s3Upload := Seq(),
     s3Progress := false,
     s3ExpirationDate := new java.util.Date(),
-    dummy := ()
+    dummy := (())
   )
 
   override def projectSettings: Seq[Def.Setting[_]] = super.projectSettings ++ s3Settings
