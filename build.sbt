@@ -16,7 +16,11 @@ lazy val root = (project in file("."))
   .enablePlugins(SbtPlugin)
 
 libraryDependencies ++= Seq("com.amazonaws" % "aws-java-sdk-s3" % "1.11.427",
-                            "commons-lang" % "commons-lang" % "2.6")
+                            "commons-lang" % "commons-lang" % "2.6",
+                            "javax.xml.bind" % "jaxb-api" % "2.2.11",
+                            "com.sun.xml.bind" % "jaxb-core" % "2.2.11",
+                            "com.sun.xml.bind" % "jaxb-impl" % "2.2.11",
+                            "javax.activation" % "activation" % "1.1.1")
 
 scalacOptions in (Compile, doc) ++=
   Opts.doc.title(name.value + ": " + description.value) ++
