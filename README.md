@@ -7,8 +7,8 @@
 ## Usage
 
 * add to your project/plugin.sbt:
-   `resolvers += Resolver.url("sbts3 ivy resolver", url("https://dl.bintray.com/emersonloureiro/sbt-plugins"))(Resolver.ivyStylePatterns)`
-   `addSbtPlugin("cf.janga" % "sbts3" % "0.10.3")`
+   `resolvers += resolvers += Resolver.sonatypeRepo("public")`
+   `addSbtPlugin("cf.janga" % "sbts3" % "0.10.5")`
 * then add to your build.sbt the line:
    `enablePlugins(S3Plugin)`
 
@@ -27,7 +27,7 @@ project/plugin.sbt:
 
     resolvers += Resolver.url("sbts3 ivy resolver", url("https://dl.bintray.com/emersonloureiro/sbt-plugins"))(Resolver.ivyStylePatterns)
 
-    addSbtPlugin("cf.janga" % "sbts3" % "0.10.3")
+    addSbtPlugin("cf.janga" % "sbts3" % "0.10.5")
 
 build.sbt:
 
@@ -96,3 +96,21 @@ build.sbt:
 ## License
 
 This code is open source software licensed under the <a href="http://www.apache.org/licenses/LICENSE-2.0.html">Apache 2.0 License</a>.
+
+## Publishing a New Release
+
+Change the version to the next non-snapshot version by modifying the version var on `build.sbt`.
+
+Then, publish a signed artifact to Sonatype
+
+```
+sbt publishSigned
+```
+
+Once that succeeds, perform a sonatype release:
+
+```
+sbt sonatypeRelease
+```
+
+Update the version to the next snapshot and commit.

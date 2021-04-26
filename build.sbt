@@ -1,8 +1,10 @@
+import xerial.sbt.Sonatype._
+
 name := "sbts3"
 
 description := "S3 Plugin for sbt"
 
-version := "0.10.4-SNAPSHOT"
+version := "0.10.6-SNAPSHOT"
 
 isSnapshot := true
 
@@ -27,12 +29,16 @@ scalacOptions in (Compile, doc) ++=
   Opts.doc.version(version.value) ++
   Seq("-doc-root-content", (sourceDirectory.value / "main/rootdoc.txt").getAbsolutePath())
 
-publishMavenStyle := false
+publishTo := sonatypePublishTo.value
+
+sonatypeProjectHosting := Some(GitHubHosting("emersonloureiro", "sbt-s3", "emerson.loureiro@gmail.com"))
+
+sonatypeProfileName := "cf.janga"
+
+publishMavenStyle := true
+
+publishConfiguration := publishConfiguration.value.withOverwrite(true)
 
 crossSbtVersions := Seq("0.13.18", "1.2.8")
 
-bintrayRepository := "sbt-plugins"
-
 licenses += ("Apache-2.0", url("https://www.apache.org/licenses/LICENSE-2.0"))
-
-bintrayOrganization := None
